@@ -163,6 +163,7 @@ class RoutineProvider extends ChangeNotifier {
       taskId: taskId,
       dayOfWeek: dayToAssign,
       orderIndex: nextOrder,
+      status: TaskStatus.pending, // Típusbiztos kezdőérték enumként
       scheduledTime: scheduledTime,
     );
     final scheduleId = await _dbHelper.insertSchedule(scheduleModel);
@@ -257,7 +258,8 @@ class RoutineProvider extends ChangeNotifier {
     for (int day = 1; day <= 7; day++) {
       final schedules = await _dbHelper.getSchedulesForDay(day);
       for (final schedule in schedules) {
-        if (schedule.status != 'COMPLETED') {
+        // Típusbiztos vizsgálat: kizárja a kis/nagybetűs string elcsúszást!
+        if (schedule.status != TaskStatus.completed) {
           final task = allTasks.firstWhere(
             (t) => t.id == schedule.taskId,
             orElse: () => TaskModel(

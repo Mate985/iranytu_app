@@ -1,9 +1,29 @@
+enum TaskStatus {
+  pending,
+  completed;
+
+  /// Biztonságos parser: kisbetűsíti és levágja a szóközöket,
+  /// így kezeli a korábbi 'PENDING', 'pending' vagy akár null értékeket is.
+  static TaskStatus fromString(String? value) {
+    switch (value?.trim().toLowerCase()) {
+      case 'completed':
+        return TaskStatus.completed;
+      case 'pending':
+      default:
+        return TaskStatus.pending;
+    }
+  }
+
+  /// Adatbázisba íráshoz szöveges reprezentáció (kisbetűs konzisztencia)
+  String toDbValue() => name;
+}
+
 class DailyScheduleModel {
   final int? id;
   final int taskId;
   final int dayOfWeek; // 1: Hétfő ... 7: Vasárnap
   final int orderIndex;
-  final String status; // 'PENDING', 'COMPLETED'
+  final TaskStatus status; // String helyett TaskStatus típus!
   final String? scheduledTime; // pl. "08:00"
 
   DailyScheduleModel({
@@ -11,7 +31,7 @@ class DailyScheduleModel {
     required this.taskId,
     required this.dayOfWeek,
     required this.orderIndex,
-    this.status = 'PENDING',
+    this.status = TaskStatus.pending,
     this.scheduledTime,
   });
 
@@ -21,7 +41,7 @@ class DailyScheduleModel {
       'task_id': taskId,
       'day_of_week': dayOfWeek,
       'order_index': orderIndex,
-      'status': status,
+      'status': status.toDbValue(), // 'pending' vagy 'completed' kerül a DB-be
       'scheduled_time': scheduledTime,
     };
   }
@@ -32,7 +52,7 @@ class DailyScheduleModel {
       taskId: map['task_id'] as int,
       dayOfWeek: map['day_of_week'] as int,
       orderIndex: map['order_index'] as int,
-      status: (map['status'] as String?) ?? 'PENDING',
+      status: TaskStatus.fromString(map['status'] as String?),
       scheduledTime: map['scheduled_time'] as String?,
     );
   }
@@ -42,7 +62,7 @@ class DailyScheduleModel {
     int? taskId,
     int? dayOfWeek,
     int? orderIndex,
-    String? status,
+    TaskStatus? status,
     String? scheduledTime,
   }) {
     return DailyScheduleModel(
