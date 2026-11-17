@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/reward_provider.dart';
 import '../../data/models/reward_model.dart';
+import '../widgets/parental_pin_dialog.dart';
 
 class MyRoomScreen extends StatefulWidget {
   const MyRoomScreen({super.key});
@@ -68,10 +69,16 @@ class _MyRoomScreenState extends State<MyRoomScreen> {
     });
   }
 
-  Widget _buildRewardWidget(RewardModel reward, {double size = 54}) {
+  Widget _buildRewardWidget(
+    RewardModel reward, {
+    double size = 54,
+    int count = 1,
+  }) {
+    Widget baseWidget;
+
     if (reward.imageType == 'CUSTOM_IMAGE' &&
         File(reward.imagePath).existsSync()) {
-      return Container(
+      baseWidget = Container(
         width: size,
         height: size,
         decoration: BoxDecoration(
@@ -90,51 +97,92 @@ class _MyRoomScreenState extends State<MyRoomScreen> {
           child: Image.file(File(reward.imagePath), fit: BoxFit.cover),
         ),
       );
+    } else {
+      IconData iconData = Icons.stars_rounded;
+      switch (reward.imagePath) {
+        case 'icecream':
+          iconData = Icons.icecream_rounded;
+          break;
+        case 'tv':
+          iconData = Icons.tv_rounded;
+          break;
+        case 'park':
+          iconData = Icons.park_rounded;
+          break;
+        case 'toys':
+          iconData = Icons.toys_rounded;
+          break;
+        case 'book':
+          iconData = Icons.menu_book_rounded;
+          break;
+        case 'sports':
+          iconData = Icons.sports_esports_rounded;
+          break;
+      }
+
+      baseWidget = Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: const Color(0xFFFEF08A),
+          shape: BoxShape.circle,
+          border: Border.all(color: const Color(0xFFF59E0B), width: 2.5),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.18),
+              blurRadius: 6,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Icon(
+          iconData,
+          size: size * 0.58,
+          color: const Color(0xFFB45309),
+        ),
+      );
     }
 
-    IconData iconData = Icons.stars_rounded;
-    switch (reward.imagePath) {
-      case 'icecream':
-        iconData = Icons.icecream_rounded;
-        break;
-      case 'tv':
-        iconData = Icons.tv_rounded;
-        break;
-      case 'park':
-        iconData = Icons.park_rounded;
-        break;
-      case 'toys':
-        iconData = Icons.toys_rounded;
-        break;
-      case 'book':
-        iconData = Icons.menu_book_rounded;
-        break;
-      case 'sports':
-        iconData = Icons.sports_esports_rounded;
-        break;
-    }
+    if (count <= 1) return baseWidget;
 
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: const Color(0xFFFEF08A),
-        shape: BoxShape.circle,
-        border: Border.all(color: const Color(0xFFF59E0B), width: 2.5),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.18),
-            blurRadius: 6,
-            offset: const Offset(0, 3),
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        baseWidget,
+        Positioned(
+          bottom: -4,
+          right: -6,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: const Color(0xFF16A34A),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.white, width: 1.5),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  blurRadius: 4,
+                ),
+              ],
+            ),
+            child: Text(
+              'x$count',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
           ),
-        ],
-      ),
-      child: Icon(iconData, size: size * 0.58, color: const Color(0xFFB45309)),
+        ),
+      ],
     );
   }
 
   void _showTrophyCelebration(RewardModel reward) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final rewardProv = context.read<RewardProvider>();
+    final count = rewardProv.getRedeemCount(reward.id);
 
     showDialog(
       context: context,
@@ -145,10 +193,10 @@ class _MyRoomScreenState extends State<MyRoomScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(height: 10),
-            _buildRewardWidget(reward, size: 76),
+            _buildRewardWidget(reward, size: 76, count: count),
             const SizedBox(height: 16),
             Text(
-              reward.title,
+              count > 1 ? '${reward.title} (x$count)' : reward.title,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 20,
@@ -160,7 +208,9 @@ class _MyRoomScreenState extends State<MyRoomScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Büszke lehetsz magadra, ezt a trófeát az ügyességedért kaptad! 🏆⭐',
+              count > 1
+                  ? 'Ügyes vagy! Ebből a jutalomból már $count darabot gyűjtöttél össze! 🏆⭐'
+                  : 'Büszke lehetsz magadra, ezt a trófeát az ügyességedért kaptad! 🏆⭐',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
@@ -171,24 +221,68 @@ class _MyRoomScreenState extends State<MyRoomScreen> {
             ),
           ],
         ),
+        actionsAlignment: MainAxisAlignment.center,
         actions: [
-          Center(
-            child: ElevatedButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF22C55E),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF22C55E),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: const Text(
+                    'Szuper vagyok!',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
-              child: const Text(
-                'Szuper vagyok!',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
+              const SizedBox(height: 6),
+              TextButton.icon(
+                onPressed: () async {
+                  Navigator.of(ctx).pop();
+                  final isAuthorized = await ParentalPinDialog.show(context);
+                  if (!isAuthorized || !mounted) return;
+
+                  await rewardProv.fulfillReward(reward);
+                  if (!mounted) return;
+                  final remaining = rewardProv.getRedeemCount(reward.id);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        remaining > 0
+                            ? '1 db "${reward.title}" teljesítve! (Még $remaining db maradt a polcon) ✅'
+                            : '"${reward.title}" teljesítve és elpakolva a polcról! ✅',
+                      ),
+                      backgroundColor: const Color(0xFF0D9488),
+                    ),
+                  );
+                },
+                icon: const Icon(
+                  Icons.check_circle_outline_rounded,
+                  size: 18,
+                  color: Color(0xFF0D9488),
+                ),
+                label: Text(
+                  count > 1
+                      ? 'Szülői jóváhagyás: 1 db teljesítve (-1)'
+                      : 'Szülői jóváhagyás: Jutalom teljesítve',
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF0D9488),
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
         ],
       ),
@@ -658,6 +752,7 @@ class _MyRoomScreenState extends State<MyRoomScreen> {
                         ...placedRewards.map((reward) {
                           if (reward.id == null) return const SizedBox.shrink();
                           final rewardId = reward.id!;
+                          final count = rewardProv.getRedeemCount(rewardId);
 
                           final currentOffset =
                               _dragPositions[rewardId] ??
@@ -741,7 +836,11 @@ class _MyRoomScreenState extends State<MyRoomScreen> {
                               child: Stack(
                                 clipBehavior: Clip.none,
                                 children: [
-                                  _buildRewardWidget(reward, size: 54),
+                                  _buildRewardWidget(
+                                    reward,
+                                    size: 54,
+                                    count: count,
+                                  ),
                                   if (_isEditMode)
                                     Positioned(
                                       right: -6,
@@ -833,6 +932,9 @@ class _MyRoomScreenState extends State<MyRoomScreen> {
                                         const SizedBox(width: 14),
                                     itemBuilder: (context, index) {
                                       final reward = unplacedRewards[index];
+                                      final count = rewardProv.getRedeemCount(
+                                        reward.id,
+                                      );
                                       return InkWell(
                                         onTap: () {
                                           if (reward.id != null) {
@@ -850,6 +952,7 @@ class _MyRoomScreenState extends State<MyRoomScreen> {
                                             _buildRewardWidget(
                                               reward,
                                               size: 48,
+                                              count: count,
                                             ),
                                             const SizedBox(height: 4),
                                             SizedBox(

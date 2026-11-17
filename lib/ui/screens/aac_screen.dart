@@ -34,7 +34,6 @@ class _AacScreenState extends State<AacScreen>
     super.dispose();
   }
 
-  // Szülői PIN ellenőrzés
   Future<bool> _authenticateParent() async {
     final hasPin = await ParentalService.hasPinConfigured();
     if (!hasPin) return true;
@@ -49,7 +48,6 @@ class _AacScreenState extends State<AacScreen>
     return isAuthorized ?? false;
   }
 
-  // Új kártya hozzáadása
   Future<void> _addNewCard(AacProvider aacProv) async {
     final authorized = await _authenticateParent();
     if (!authorized) return;
@@ -72,7 +70,6 @@ class _AacScreenState extends State<AacScreen>
     }
   }
 
-  // Kártya törlése megerősítéssel
   Future<void> _confirmDeleteCard(
     AacProvider aacProv,
     AacCardModel card,
@@ -210,7 +207,6 @@ class _AacScreenState extends State<AacScreen>
         final card = cards[index];
         final isSelected = aacProv.selectedCard?.id == card.id;
 
-        // Témakövető kártyaszínek
         final cardBgColor = isSelected
             ? (isDark
                   ? const Color(0xFF0369A1).withValues(alpha: 0.35)
@@ -285,7 +281,6 @@ class _AacScreenState extends State<AacScreen>
               ),
             ),
 
-            // Törlés gomb kezelő módban
             if (_isManageMode)
               Positioned(
                 top: -6,
@@ -392,7 +387,6 @@ class _AacScreenState extends State<AacScreen>
           ),
           body: Column(
             children: [
-              // Mondatszalag
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(
@@ -429,18 +423,16 @@ class _AacScreenState extends State<AacScreen>
                                   : const Color(0xFFF1F5F9),
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: Icon(
+                            child: const Icon(
                               Icons.touch_app_rounded,
-                              color: isDark
-                                  ? const Color(0xFF94A3B8)
-                                  : const Color(0xFF94A3B8),
+                              color: Color(0xFF94A3B8),
                               size: 24,
                             ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
-                              'Válassz ki egy kártyát, és elmondom helyetted!',
+                              'Válassz ki egy kártyát!',
                               style: TextStyle(
                                 fontSize: 13,
                                 color: isDark
@@ -491,11 +483,17 @@ class _AacScreenState extends State<AacScreen>
                                   : const Color(0xFF0284C7),
                               size: 30,
                             ),
-                            onPressed: () => AudioService.instance.speakOrPlay(
-                              text: selectedCard.speechText,
-                              audioPath: selectedCard.audioPath,
-                            ),
-                            tooltip: 'Felolvasás újra',
+                            onPressed: () {
+                              final textToSpeak =
+                                  selectedCard.speechText.trim().isNotEmpty
+                                  ? selectedCard.speechText
+                                  : selectedCard.title;
+                              AudioService.instance.speakOrPlay(
+                                text: textToSpeak,
+                                audioPath: selectedCard.audioPath,
+                              );
+                            },
+                            tooltip: 'Hang lejátszása újra',
                           ),
                           IconButton(
                             icon: const Icon(
@@ -510,7 +508,6 @@ class _AacScreenState extends State<AacScreen>
                       ),
               ),
 
-              // Kártyák fülek szerint
               Expanded(
                 child: TabBarView(
                   controller: _tabController,

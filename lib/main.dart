@@ -11,7 +11,7 @@ import 'providers/theme_provider.dart';
 import 'services/notification_service.dart';
 
 import 'ui/screens/session_timeout_screen.dart';
-import 'ui/screens/splash_screen.dart'; // <-- Beimportáljuk a SplashScreen-t
+import 'ui/screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,12 +45,13 @@ class MyApp extends StatelessWidget {
           themeMode: themeProv.themeMode,
           theme: ThemeProvider.lightTheme,
           darkTheme: ThemeProvider.darkTheme,
+          themeAnimationDuration: const Duration(milliseconds: 320),
+          themeAnimationCurve: Curves.easeInOutCubic,
           home: Consumer<SessionTimerProvider>(
             builder: (context, timerProv, child) {
               if (timerProv.isTimeUp) {
                 return const SessionTimeoutScreen();
               }
-              // Itt indítjuk a Splash / Intro képernyőt a HomeScreen helyett:
               return const SplashScreen();
             },
           ),

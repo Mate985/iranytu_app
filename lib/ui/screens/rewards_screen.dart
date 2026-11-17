@@ -60,7 +60,11 @@ class RewardsScreen extends StatelessWidget {
     );
   }
 
-  void _claimReward(BuildContext context, RewardModel reward) {
+  void _claimReward(
+    BuildContext context,
+    RewardModel reward,
+    int currentCount,
+  ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     showDialog(
@@ -68,13 +72,25 @@ class RewardsScreen extends StatelessWidget {
       builder: (ctx) => AlertDialog(
         backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.celebration_rounded, color: Color(0xFFD97706), size: 28),
-            SizedBox(width: 8),
-            Text(
-              'Jutalom beváltása',
-              style: TextStyle(fontWeight: FontWeight.bold),
+            const Icon(
+              Icons.celebration_rounded,
+              color: Color(0xFFD97706),
+              size: 28,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Jutalom beváltása',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: isDark
+                      ? const Color(0xFFF8FAFC)
+                      : const Color(0xFF1E293B),
+                ),
+              ),
             ),
           ],
         ),
@@ -84,10 +100,12 @@ class RewardsScreen extends StatelessWidget {
             _buildRewardImage(reward, isDark: isDark),
             const SizedBox(height: 16),
             Text(
-              'Szeretnéd beváltani a(z) "${reward.title}" jutalmat?',
+              currentCount > 0
+                  ? 'Már van $currentCount db ilyen jutalmad a Kuckóban.\nSzeretnél beváltani még egyet ("${reward.title}")?'
+                  : 'Szeretnéd beváltani a(z) "${reward.title}" jutalmat?',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 16,
+                fontSize: 15,
                 color: isDark
                     ? const Color(0xFFF8FAFC)
                     : const Color(0xFF334155),
@@ -121,14 +139,16 @@ class RewardsScreen extends StatelessWidget {
           ElevatedButton(
             onPressed: () async {
               Navigator.of(ctx).pop();
-              final success = await context.read<RewardProvider>().redeemReward(
-                reward,
-              );
+              final rewardProv = context.read<RewardProvider>();
+              final success = await rewardProv.redeemReward(reward);
               if (context.mounted && success) {
+                final newCount = rewardProv.getRedeemCount(reward.id);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
-                      'Gratulálunk! Megkaptad: ${reward.title}! 🎉',
+                      newCount > 1
+                          ? 'Szuper! Most már $newCount db "${reward.title}" vár a Kuckódban! 🎉'
+                          : 'Gratulálunk! Megkaptad: ${reward.title}! 🎉',
                     ),
                     backgroundColor: const Color(0xFF16A34A),
                   ),
@@ -210,32 +230,36 @@ class RewardsScreen extends StatelessWidget {
                   mainAxisSize: MainAxisSize.max,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Összegyűjtött csillagaid',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: isDark
-                                ? const Color(0xFFFEF9C3)
-                                : const Color(0xFF854D0E),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Összegyűjtött csillagaid',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: isDark
+                                  ? const Color(0xFFFEF9C3)
+                                  : const Color(0xFF854D0E),
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Válassz egy jutalmat!',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isDark
-                                ? const Color(0xFFFDE047)
-                                : const Color(0xFF713F12),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Válassz egy jutalmat (akár többször is)!',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark
+                                  ? const Color(0xFFFDE047)
+                                  : const Color(0xFF713F12),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
+                    const SizedBox(width: 8),
                     Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         const Icon(
                           Icons.star_rounded,
@@ -280,142 +304,189 @@ class RewardsScreen extends StatelessWidget {
                               crossAxisCount: 2,
                               crossAxisSpacing: 14,
                               mainAxisSpacing: 14,
-                              childAspectRatio: 0.72,
+                              childAspectRatio: 0.70,
                             ),
                         itemCount: rewardProv.rewards.length,
                         itemBuilder: (context, index) {
                           final reward = rewardProv.rewards[index];
                           final canAfford = currentStars >= reward.pointsCost;
                           final missingStars = reward.pointsCost - currentStars;
+                          final redeemCount = rewardProv.getRedeemCount(
+                            reward.id,
+                          );
 
-                          return Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: isDark
-                                  ? const Color(0xFF1E293B)
-                                  : Colors.white,
-                              borderRadius: BorderRadius.circular(18),
-                              border: Border.all(
-                                color: canAfford
-                                    ? (isDark
-                                          ? const Color(0xFF22C55E)
-                                          : const Color(0xFF86EFAC))
-                                    : (isDark
-                                          ? const Color(0xFF334155)
-                                          : const Color(0xFFE2E8F0)),
-                                width: canAfford ? 2 : 1,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(
-                                    alpha: isDark ? 0.25 : 0.04,
+                          return Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: isDark
+                                      ? const Color(0xFF1E293B)
+                                      : Colors.white,
+                                  borderRadius: BorderRadius.circular(18),
+                                  border: Border.all(
+                                    color: canAfford
+                                        ? (isDark
+                                              ? const Color(0xFF22C55E)
+                                              : const Color(0xFF86EFAC))
+                                        : (isDark
+                                              ? const Color(0xFF334155)
+                                              : const Color(0xFFE2E8F0)),
+                                    width: canAfford ? 2 : 1,
                                   ),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 3),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(
+                                        alpha: isDark ? 0.25 : 0.04,
+                                      ),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                _buildRewardImage(reward, isDark: isDark),
-                                const SizedBox(height: 6),
-                                Expanded(
-                                  child: Center(
-                                    child: Text(
-                                      reward.title,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        height: 1.2,
-                                        color: isDark
-                                            ? const Color(0xFFF8FAFC)
-                                            : const Color(0xFF1E293B),
+                                child: Column(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    _buildRewardImage(reward, isDark: isDark),
+                                    const SizedBox(height: 6),
+                                    Expanded(
+                                      child: Center(
+                                        child: Text(
+                                          reward.title,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                            height: 1.2,
+                                            color: isDark
+                                                ? const Color(0xFFF8FAFC)
+                                                : const Color(0xFF1E293B),
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                if (canAfford)
-                                  SizedBox(
-                                    width: double.infinity,
-                                    height: 38,
-                                    child: ElevatedButton(
-                                      onPressed: () =>
-                                          _claimReward(context, reward),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(
-                                          0xFF22C55E,
+                                    const SizedBox(height: 6),
+                                    if (canAfford)
+                                      SizedBox(
+                                        width: double.infinity,
+                                        height: 38,
+                                        child: ElevatedButton(
+                                          onPressed: () => _claimReward(
+                                            context,
+                                            reward,
+                                            redeemCount,
+                                          ),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: const Color(
+                                              0xFF22C55E,
+                                            ),
+                                            foregroundColor: Colors.white,
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 4,
+                                              vertical: 0,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                            ),
+                                          ),
+                                          child: FittedBox(
+                                            fit: BoxFit.scaleDown,
+                                            child: Text(
+                                              redeemCount > 0
+                                                  ? 'Még egyet! (${reward.pointsCost} ⭐)'
+                                                  : 'Kérem! (${reward.pointsCost} ⭐)',
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 12.5,
+                                              ),
+                                            ),
+                                          ),
                                         ),
-                                        foregroundColor: Colors.white,
+                                      )
+                                    else
+                                      Container(
+                                        width: double.infinity,
+                                        height: 38,
                                         padding: const EdgeInsets.symmetric(
                                           horizontal: 4,
-                                          vertical: 0,
                                         ),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            10,
-                                          ),
-                                        ),
-                                      ),
-                                      child: FittedBox(
-                                        fit: BoxFit.scaleDown,
-                                        child: Text(
-                                          'Kérem! (${reward.pointsCost} ⭐)',
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 12.5,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  )
-                                else
-                                  Container(
-                                    width: double.infinity,
-                                    height: 38,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: isDark
-                                          ? const Color(0xFF334155)
-                                          : const Color(0xFFF1F5F9),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          Icons.lock_outline_rounded,
-                                          size: 14,
+                                        decoration: BoxDecoration(
                                           color: isDark
-                                              ? const Color(0xFF94A3B8)
-                                              : const Color(0xFF64748B),
+                                              ? const Color(0xFF334155)
+                                              : const Color(0xFFF1F5F9),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
                                         ),
-                                        const SizedBox(width: 4),
-                                        FittedBox(
-                                          fit: BoxFit.scaleDown,
-                                          child: Text(
-                                            'Még $missingStars ⭐',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w600,
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Icon(
+                                              Icons.lock_outline_rounded,
+                                              size: 14,
                                               color: isDark
                                                   ? const Color(0xFF94A3B8)
                                                   : const Color(0xFF64748B),
                                             ),
+                                            const SizedBox(width: 4),
+                                            FittedBox(
+                                              fit: BoxFit.scaleDown,
+                                              child: Text(
+                                                'Még $missingStars ⭐',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: isDark
+                                                      ? const Color(0xFF94A3B8)
+                                                      : const Color(0xFF64748B),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              if (redeemCount > 0)
+                                Positioned(
+                                  top: 8,
+                                  right: 8,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 3,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF0D9488),
+                                      borderRadius: BorderRadius.circular(12),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(
+                                            alpha: 0.2,
                                           ),
+                                          blurRadius: 4,
                                         ),
                                       ],
                                     ),
+                                    child: Text(
+                                      'Kuckóban: x$redeemCount',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
                                   ),
-                              ],
-                            ),
+                                ),
+                            ],
                           );
                         },
                       ),

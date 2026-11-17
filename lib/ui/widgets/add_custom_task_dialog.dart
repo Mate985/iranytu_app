@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../data/models/custom_task_model.dart';
 import '../../providers/custom_task_provider.dart';
+import '../../services/audio_service.dart';
 import 'app_picto.dart';
 
 class AddCustomTaskDialog extends StatefulWidget {
@@ -26,7 +27,7 @@ class _AddCustomTaskDialogState extends State<AddCustomTaskDialog> {
   String _selectedCategory = 'Szókirakó';
   String? _imagePath;
   bool _isRecording = false;
-  bool _hasVoiceRecording = false;
+  String? _recordedAudioPath;
 
   final ImagePicker _picker = ImagePicker();
 
@@ -43,13 +44,36 @@ class _AddCustomTaskDialogState extends State<AddCustomTaskDialog> {
     }
   }
 
-  void _toggleVoiceRecording() {
-    setState(() {
-      _isRecording = !_isRecording;
-      if (!_isRecording) {
-        _hasVoiceRecording = true;
+  Future<void> _toggleVoiceRecording() async {
+    final audio = AudioService.instance;
+    if (_isRecording) {
+      final path = await audio.stopRecording();
+      setState(() {
+        _isRecording = false;
+        if (path != null) {
+          _recordedAudioPath = path;
+        }
+      });
+    } else {
+      final success = await audio.startRecording();
+      if (success) {
+        setState(() {
+          _isRecording = true;
+        });
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Mikrofon hozzáférés szükséges a felvételhez!'),
+          ),
+        );
       }
-    });
+    }
+  }
+
+  Future<void> _playRecordedAudio() async {
+    if (_recordedAudioPath != null && File(_recordedAudioPath!).existsSync()) {
+      await AudioService.instance.playAudio(_recordedAudioPath!);
+    }
   }
 
   Future<void> _saveTask() async {
@@ -61,14 +85,20 @@ class _AddCustomTaskDialogState extends State<AddCustomTaskDialog> {
       return;
     }
 
+    if (_isRecording) {
+      final path = await AudioService.instance.stopRecording();
+      _isRecording = false;
+      if (path != null) {
+        _recordedAudioPath = path;
+      }
+    }
+
     final newTask = CustomTaskModel(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       title: title,
       category: _selectedCategory,
       imagePath: _imagePath,
-      audioPath: _hasVoiceRecording
-          ? 'custom_voice_${DateTime.now().millisecondsSinceEpoch}'
-          : null,
+      audioPath: _selectedCategory == 'Szókirakó' ? _recordedAudioPath : null,
     );
 
     final provider = context.read<CustomTaskProvider>();
@@ -88,41 +118,61 @@ class _AddCustomTaskDialogState extends State<AddCustomTaskDialog> {
   @override
   void dispose() {
     _titleController.dispose();
+    AudioService.instance.stopAll();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final hasVoiceRecording =
+        _recordedAudioPath != null &&
+        _recordedAudioPath!.isNotEmpty &&
+        File(_recordedAudioPath!).existsSync();
+
     return AlertDialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      title: const Row(
+      title: Row(
         children: [
-          Icon(
+          const Icon(
             Icons.add_photo_alternate_rounded,
             color: Color(0xFF2563EB),
-            size: 28,
+            size: 26,
           ),
-          SizedBox(width: 10),
-          Text(
-            'Egyedi Feladat Készítése',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1E293B),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Egyedi Feladat Készítése',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: isDark
+                    ? const Color(0xFFF8FAFC)
+                    : const Color(0xFF1E293B),
+              ),
             ),
           ),
         ],
       ),
       content: SingleChildScrollView(
         child: SizedBox(
-          width: MediaQuery.of(context).size.width * 0.85,
+          width: double.maxFinite,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Adj hozzá saját tárgyat, fotót és szülői hangot a fejlesztőjátékokhoz.',
-                style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: isDark
+                      ? const Color(0xFF94A3B8)
+                      : const Color(0xFF64748B),
+                ),
               ),
               const SizedBox(height: 16),
 
@@ -142,7 +192,7 @@ class _AddCustomTaskDialogState extends State<AddCustomTaskDialog> {
               ),
               const SizedBox(height: 14),
 
-              // 2. Kategória választó (csak a két támogatott modul)
+              // 2. Kategória választó
               DropdownButtonFormField<String>(
                 value: _selectedCategory,
                 isExpanded: true,
@@ -159,26 +209,40 @@ class _AddCustomTaskDialogState extends State<AddCustomTaskDialog> {
                 items: const [
                   DropdownMenuItem(
                     value: 'Szókirakó',
-                    child: Text('Szókirakó Kaland (Betűrendező)'),
+                    child: Text(
+                      'Szókirakó Kaland (Betűrendező)',
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                   DropdownMenuItem(
                     value: 'Kép és Szó',
-                    child: Text('Kép és Szó Kaland (Kép-Szó párosító)'),
+                    child: Text(
+                      'Kép és Szó Kaland (Kép-Szó párosító)',
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ],
-                onChanged: (val) {
-                  if (val != null) setState(() => _selectedCategory = val);
+                onChanged: (val) async {
+                  if (val != null) {
+                    if (_isRecording) {
+                      await AudioService.instance.stopRecording();
+                      _isRecording = false;
+                    }
+                    setState(() => _selectedCategory = val);
+                  }
                 },
               ),
               const SizedBox(height: 16),
 
               // 3. Kép kiválasztása (Kamera / Galéria)
-              const Text(
+              Text(
                 'Vizuális kártya (Fotó):',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF334155),
+                  color: isDark
+                      ? const Color(0xFFE2E8F0)
+                      : const Color(0xFF334155),
                 ),
               ),
               const SizedBox(height: 8),
@@ -188,9 +252,15 @@ class _AddCustomTaskDialogState extends State<AddCustomTaskDialog> {
                     width: 70,
                     height: 70,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF1F5F9),
+                      color: isDark
+                          ? const Color(0xFF0F172A)
+                          : const Color(0xFFF1F5F9),
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0xFFCBD5E1)),
+                      border: Border.all(
+                        color: isDark
+                            ? const Color(0xFF334155)
+                            : const Color(0xFFCBD5E1),
+                      ),
                     ),
                     alignment: Alignment.center,
                     child: _imagePath != null
@@ -208,6 +278,7 @@ class _AddCustomTaskDialogState extends State<AddCustomTaskDialog> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         OutlinedButton.icon(
                           style: OutlinedButton.styleFrom(
@@ -219,7 +290,10 @@ class _AddCustomTaskDialogState extends State<AddCustomTaskDialog> {
                             Icons.photo_library_rounded,
                             size: 18,
                           ),
-                          label: const Text('Galéria megnyitása'),
+                          label: const FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text('Galéria megnyitása'),
+                          ),
                           onPressed: () => _pickImage(ImageSource.gallery),
                         ),
                         const SizedBox(height: 4),
@@ -230,7 +304,10 @@ class _AddCustomTaskDialogState extends State<AddCustomTaskDialog> {
                             ),
                           ),
                           icon: const Icon(Icons.camera_alt_rounded, size: 18),
-                          label: const Text('Fotózás kamerával'),
+                          label: const FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text('Fotózás kamerával'),
+                          ),
                           onPressed: () => _pickImage(ImageSource.camera),
                         ),
                       ],
@@ -238,57 +315,79 @@ class _AddCustomTaskDialogState extends State<AddCustomTaskDialog> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
 
-              // 4. Hangrögzítés
-              const Text(
-                'Saját hangfelvétel (Opcionális):',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF334155),
+              // 4. Hangrögzítés – KIZÁRÓLAG Szókirakó Kaland módban látszik!
+              if (_selectedCategory == 'Szókirakó') ...[
+                const SizedBox(height: 16),
+                Text(
+                  'Saját hangfelvétel (Opcionális):',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: isDark
+                        ? const Color(0xFFE2E8F0)
+                        : const Color(0xFF334155),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                ),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: Icon(
-                        _isRecording ? Icons.stop_rounded : Icons.mic_rounded,
-                        color: _isRecording
-                            ? Colors.red
-                            : const Color(0xFF2563EB),
-                        size: 28,
-                      ),
-                      onPressed: _toggleVoiceRecording,
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? const Color(0xFF0F172A)
+                        : const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: isDark
+                          ? const Color(0xFF334155)
+                          : const Color(0xFFE2E8F0),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _isRecording
-                            ? 'Felvétel folyamatban... Beszélj bele!'
-                            : (_hasVoiceRecording
-                                  ? 'Hangfelvétel rögzítve! ✅'
-                                  : 'Kattints a mikrofonra a rögzítéshez'),
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
+                  ),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: Icon(
+                          _isRecording ? Icons.stop_rounded : Icons.mic_rounded,
                           color: _isRecording
                               ? Colors.red
-                              : const Color(0xFF64748B),
+                              : const Color(0xFF2563EB),
+                          size: 28,
+                        ),
+                        onPressed: _toggleVoiceRecording,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          _isRecording
+                              ? 'Felvétel folyamatban... Beszélj bele!'
+                              : (hasVoiceRecording
+                                    ? 'Hangfelvétel rögzítve! ✅'
+                                    : 'Kattints a mikrofonra a rögzítéshez'),
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: _isRecording
+                                ? Colors.red
+                                : (hasVoiceRecording
+                                      ? const Color(0xFF16A34A)
+                                      : const Color(0xFF64748B)),
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                      if (hasVoiceRecording && !_isRecording)
+                        IconButton(
+                          icon: const Icon(
+                            Icons.play_circle_fill_rounded,
+                            color: Color(0xFF16A34A),
+                            size: 28,
+                          ),
+                          tooltip: 'Visszahallgatás',
+                          onPressed: _playRecordedAudio,
+                        ),
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ),

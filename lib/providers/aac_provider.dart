@@ -30,13 +30,17 @@ class AacProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // Kártya kiválasztása és lejátszása (saját hangfelvétel vagy TTS)
+  // Kártya kiválasztása és lejátszása (saját hanggal, vagy tartalék Google TTS-szel)
   Future<void> selectAndSpeakCard(AacCardModel card) async {
     _selectedCard = card;
     notifyListeners();
 
+    final textToSpeak = card.speechText.trim().isNotEmpty
+        ? card.speechText
+        : card.title;
+
     await AudioService.instance.speakOrPlay(
-      text: card.speechText,
+      text: textToSpeak,
       audioPath: card.audioPath,
     );
   }

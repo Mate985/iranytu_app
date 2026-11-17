@@ -27,12 +27,13 @@ class TracePatternPickerDialog extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 24),
       backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: Container(
-        padding: const EdgeInsets.all(16),
-        width: MediaQuery.of(context).size.width * 0.92,
-        height: MediaQuery.of(context).size.height * 0.78,
+        padding: const EdgeInsets.all(14),
+        width: MediaQuery.of(context).size.width * 0.94,
+        height: MediaQuery.of(context).size.height * 0.80,
         child: Column(
           children: [
             Row(
@@ -90,9 +91,9 @@ class TracePatternPickerDialog extends StatelessWidget {
                 physics: const BouncingScrollPhysics(),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
-                  childAspectRatio: 2.0,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
+                  childAspectRatio: 1.65,
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 8,
                 ),
                 itemCount: patterns.length,
                 itemBuilder: (context, index) {
@@ -133,7 +134,7 @@ class TracePatternPickerDialog extends StatelessWidget {
                             p.iconEmoji,
                             style: const TextStyle(fontSize: 20),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 6),
                           Expanded(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -141,11 +142,12 @@ class TracePatternPickerDialog extends StatelessWidget {
                               children: [
                                 Text(
                                   '#${p.id} ${p.title}',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.visible,
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 12.5,
+                                    fontSize: 12,
+                                    height: 1.2,
                                     color: isSelected
                                         ? const Color(0xFF38BDF8)
                                         : (isDark
@@ -159,7 +161,7 @@ class TracePatternPickerDialog extends StatelessWidget {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
-                                    fontSize: 10.5,
+                                    fontSize: 10,
                                     color: isDark
                                         ? const Color(0xFF94A3B8)
                                         : const Color(0xFF64748B),

@@ -27,7 +27,7 @@ class _AddAacCardDialogState extends State<AddAacCardDialog> {
   String? _recordedAudioPath;
   bool _isRecording = false;
 
-  final List<Map<String, dynamic>> _availableIcons = [
+  final _availableIcons = [
     {
       'path': 'water_drop',
       'icon': Icons.water_drop_rounded,
@@ -173,11 +173,12 @@ class _AddAacCardDialogState extends State<AddAacCardDialog> {
         File(_recordedAudioPath!).existsSync();
 
     return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 420),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(18),
           child: Form(
             key: _formKey,
             child: Column(
@@ -185,17 +186,21 @@ class _AddAacCardDialogState extends State<AddAacCardDialog> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Új kártya létrehozása',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF0F172A),
+                    const Expanded(
+                      child: Text(
+                        'Új kártya létrehozása',
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0F172A),
+                        ),
                       ),
                     ),
                     IconButton(
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
                       icon: const Icon(
                         Icons.close_rounded,
                         color: Color(0xFF64748B),
@@ -218,6 +223,7 @@ class _AddAacCardDialogState extends State<AddAacCardDialog> {
                 const SizedBox(height: 6),
                 DropdownButtonFormField<String>(
                   value: _selectedCategory,
+                  isExpanded: true,
                   decoration: InputDecoration(
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 12,
@@ -230,15 +236,24 @@ class _AddAacCardDialogState extends State<AddAacCardDialog> {
                   items: const [
                     DropdownMenuItem(
                       value: 'NEEDS',
-                      child: Text('Kérések / Szükségletek'),
+                      child: Text(
+                        'Kérések / Szükségletek',
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     DropdownMenuItem(
                       value: 'FEELINGS',
-                      child: Text('Érzések / Hangulat'),
+                      child: Text(
+                        'Érzések / Hangulat',
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     DropdownMenuItem(
                       value: 'ACTIVITIES',
-                      child: Text('Tevékenységek'),
+                      child: Text(
+                        'Tevékenységek',
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
                   onChanged: (val) {
@@ -293,17 +308,17 @@ class _AddAacCardDialogState extends State<AddAacCardDialog> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
                     if (hasAudio && !_isRecording)
                       IconButton.filledTonal(
                         style: IconButton.styleFrom(
                           backgroundColor: const Color(0xFFDCFCE7),
-                          padding: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.all(10),
                         ),
                         icon: const Icon(
                           Icons.play_circle_fill_rounded,
                           color: Color(0xFF16A34A),
-                          size: 24,
+                          size: 22,
                         ),
                         tooltip: 'Hang meghallgatása',
                         onPressed: _playRecording,
@@ -315,7 +330,7 @@ class _AddAacCardDialogState extends State<AddAacCardDialog> {
                             : (hasAudio
                                   ? const Color(0xFFE0F2FE)
                                   : const Color(0xFFF1F5F9)),
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(10),
                       ),
                       icon: Icon(
                         _isRecording
@@ -328,7 +343,7 @@ class _AddAacCardDialogState extends State<AddAacCardDialog> {
                             : (hasAudio
                                   ? const Color(0xFF0284C7)
                                   : const Color(0xFF64748B)),
-                        size: 24,
+                        size: 22,
                       ),
                       tooltip: _isRecording
                           ? 'Felvétel leállítása'
@@ -341,7 +356,7 @@ class _AddAacCardDialogState extends State<AddAacCardDialog> {
                 ),
                 const SizedBox(height: 16),
 
-                // Kép vagy Ikon választó
+                // Kép vagy Ikon választó (Overflow védve)
                 const Text(
                   'Kártya képe:',
                   style: TextStyle(
@@ -356,13 +371,25 @@ class _AddAacCardDialogState extends State<AddAacCardDialog> {
                   children: [
                     Expanded(
                       child: ChoiceChip(
-                        label: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.palette_rounded, size: 18),
-                            SizedBox(width: 6),
-                            Text('Gyári ikon'),
-                          ],
+                        showCheckmark: false,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 8,
+                        ),
+                        label: const SizedBox(
+                          width: double.infinity,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.palette_rounded, size: 17),
+                                SizedBox(width: 5),
+                                Text('Gyári ikon'),
+                              ],
+                            ),
+                          ),
                         ),
                         selected: _imageType == 'DEFAULT_ICON',
                         onSelected: (val) {
@@ -370,16 +397,28 @@ class _AddAacCardDialogState extends State<AddAacCardDialog> {
                         },
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: ChoiceChip(
-                        label: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.photo_library_rounded, size: 18),
-                            SizedBox(width: 6),
-                            Text('Saját fotó'),
-                          ],
+                        showCheckmark: false,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 8,
+                        ),
+                        label: const SizedBox(
+                          width: double.infinity,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.photo_library_rounded, size: 17),
+                                SizedBox(width: 5),
+                                Text('Saját fotó'),
+                              ],
+                            ),
+                          ),
                         ),
                         selected: _imageType == 'CUSTOM_IMAGE',
                         onSelected: (val) {
@@ -394,7 +433,6 @@ class _AddAacCardDialogState extends State<AddAacCardDialog> {
                 ),
                 const SizedBox(height: 12),
 
-                // Ha saját fotó van kiválasztva
                 if (_imageType == 'CUSTOM_IMAGE')
                   Center(
                     child: Column(
@@ -443,7 +481,6 @@ class _AddAacCardDialogState extends State<AddAacCardDialog> {
                     ),
                   )
                 else
-                  // Gyári ikonok listája
                   Container(
                     height: 120,
                     padding: const EdgeInsets.all(8),

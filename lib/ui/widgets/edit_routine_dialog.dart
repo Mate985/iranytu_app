@@ -90,7 +90,6 @@ class _EditRoutineDialogState extends State<EditRoutineDialog> {
   Future<void> _toggleRecord(int index) async {
     final audio = AudioService.instance;
     if (_recordingStepIndex == index) {
-      // Felvétel leállítása
       final path = await audio.stopRecording();
       setState(() {
         _recordingStepIndex = null;
@@ -99,7 +98,6 @@ class _EditRoutineDialogState extends State<EditRoutineDialog> {
         }
       });
     } else {
-      // Ha máshol futna felvétel, állítsuk le
       if (_recordingStepIndex != null) {
         await audio.stopRecording();
       }
@@ -135,8 +133,7 @@ class _EditRoutineDialogState extends State<EditRoutineDialog> {
             title: text.endsWith('.') ? text : '$text.',
             icon: Icons.check_circle_outline_rounded,
             isCompleted: existingCompleted,
-            audioPath:
-                _stepAudioPaths[i], // <-- MEGŐRIZZÜK ÉS MENTJÜK A HANGOT!
+            audioPath: _stepAudioPaths[i],
           ),
         );
       }
@@ -195,14 +192,18 @@ class _EditRoutineDialogState extends State<EditRoutineDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       title: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text(
-            'Rutin szerkesztése',
-            style: TextStyle(fontWeight: FontWeight.bold),
+          const Expanded(
+            child: Text(
+              'Rutin szerkesztése',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
           ),
           IconButton(
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
             icon: const Icon(
               Icons.delete_outline_rounded,
               color: Color(0xFFEF4444),
@@ -285,7 +286,7 @@ class _EditRoutineDialogState extends State<EditRoutineDialog> {
                             style: const TextStyle(fontSize: 11),
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 6),
                         Expanded(
                           child: TextField(
                             controller: ctrl,
@@ -295,20 +296,23 @@ class _EditRoutineDialogState extends State<EditRoutineDialog> {
                             ),
                           ),
                         ),
-                        // Lejátszás gomb, ha már van hang
                         if (hasAudio && !isRec)
                           IconButton(
+                            padding: const EdgeInsets.all(4),
+                            constraints: const BoxConstraints(),
                             icon: const Icon(
                               Icons.play_circle_fill_rounded,
                               color: Color(0xFF10B981),
-                              size: 22,
+                              size: 20,
                             ),
                             tooltip: 'Felvétel meghallgatása',
                             onPressed: () =>
                                 _playRecording(_stepAudioPaths[idx]!),
                           ),
-                        // Mikrofon felvétel gomb
+                        const SizedBox(width: 2),
                         IconButton(
+                          padding: const EdgeInsets.all(4),
+                          constraints: const BoxConstraints(),
                           icon: Icon(
                             isRec
                                 ? Icons.stop_circle_rounded
@@ -320,23 +324,26 @@ class _EditRoutineDialogState extends State<EditRoutineDialog> {
                                 : (hasAudio
                                       ? const Color(0xFF2563EB)
                                       : const Color(0xFF94A3B8)),
-                            size: 22,
+                            size: 20,
                           ),
                           tooltip: isRec
                               ? 'Felvétel leállítása'
                               : (hasAudio ? 'Újrafelvétel' : 'Hang felvétele'),
                           onPressed: () => _toggleRecord(idx),
                         ),
-                        // Törlés gomb
-                        if (_stepControllers.length > 1)
+                        if (_stepControllers.length > 1) ...[
+                          const SizedBox(width: 2),
                           IconButton(
+                            padding: const EdgeInsets.all(4),
+                            constraints: const BoxConstraints(),
                             icon: const Icon(
                               Icons.close_rounded,
                               color: Colors.redAccent,
-                              size: 20,
+                              size: 18,
                             ),
                             onPressed: () => _removeStep(idx),
                           ),
+                        ],
                       ],
                     ),
                   );

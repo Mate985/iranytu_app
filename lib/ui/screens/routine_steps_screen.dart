@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_tts/flutter_tts.dart';
 import '../../data/models/routine_step_model.dart';
 import '../../services/database_service.dart';
 import '../../services/audio_service.dart';
@@ -16,27 +15,17 @@ class RoutineStepsScreen extends StatefulWidget {
 
 class _RoutineStepsScreenState extends State<RoutineStepsScreen> {
   final DatabaseService _dbService = DatabaseService.instance;
-  final FlutterTts _flutterTts = FlutterTts();
   List<Routine> _routines = [];
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _initTts();
     _loadRoutines();
-  }
-
-  Future<void> _initTts() async {
-    await _flutterTts.setLanguage('hu-HU');
-    await _flutterTts.setSpeechRate(0.45);
-    await _flutterTts.setVolume(1.0);
-    await _flutterTts.setPitch(1.0);
   }
 
   @override
   void dispose() {
-    _flutterTts.stop();
     AudioService.instance.stopAll();
     super.dispose();
   }
@@ -245,25 +234,37 @@ class _RoutineStepsScreenState extends State<RoutineStepsScreen> {
                                         ),
                                 ),
                                 const SizedBox(width: 10),
-                                // Itt töröltük a maxLines-t és az ellipsis-t, így teljes egészében kiírja a szöveget
                                 Expanded(
-                                  child: Text(
-                                    step.title,
-                                    softWrap: true,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                      height: 1.3,
-                                      decoration: step.isCompleted
-                                          ? TextDecoration.lineThrough
-                                          : TextDecoration.none,
-                                      color: step.isCompleted
-                                          ? (isDark
-                                                ? const Color(0xFF4ADE80)
-                                                : const Color(0xFF15803D))
-                                          : (isDark
-                                                ? const Color(0xFFF8FAFC)
-                                                : const Color(0xFF1E293B)),
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(8),
+                                    onTap: () =>
+                                        AudioService.instance.speakOrPlay(
+                                          text: step.title,
+                                          audioPath: step.audioPath,
+                                        ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 4,
+                                      ),
+                                      child: Text(
+                                        step.title,
+                                        softWrap: true,
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500,
+                                          height: 1.3,
+                                          decoration: step.isCompleted
+                                              ? TextDecoration.lineThrough
+                                              : TextDecoration.none,
+                                          color: step.isCompleted
+                                              ? (isDark
+                                                    ? const Color(0xFF4ADE80)
+                                                    : const Color(0xFF15803D))
+                                              : (isDark
+                                                    ? const Color(0xFFF8FAFC)
+                                                    : const Color(0xFF1E293B)),
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -281,7 +282,7 @@ class _RoutineStepsScreenState extends State<RoutineStepsScreen> {
                                             : const Color(0xFF2563EB),
                                         size: 22,
                                       ),
-                                      tooltip: 'Lépés felolvasása',
+                                      tooltip: 'Hang lejátszása',
                                       onPressed: () =>
                                           AudioService.instance.speakOrPlay(
                                             text: step.title,
@@ -332,8 +333,9 @@ class _RoutineStepsScreenState extends State<RoutineStepsScreen> {
                                     onPressed: () async {
                                       final isAuthorized =
                                           await ParentalPinDialog.show(context);
-                                      if (!isAuthorized || !context.mounted)
+                                      if (!isAuthorized || !context.mounted) {
                                         return;
+                                      }
 
                                       final updated =
                                           await EditRoutineDialog.show(
@@ -355,8 +357,9 @@ class _RoutineStepsScreenState extends State<RoutineStepsScreen> {
                                     onPressed: () async {
                                       final isAuthorized =
                                           await ParentalPinDialog.show(context);
-                                      if (!isAuthorized || !context.mounted)
+                                      if (!isAuthorized || !context.mounted) {
                                         return;
+                                      }
 
                                       final confirm = await showDialog<bool>(
                                         context: context,

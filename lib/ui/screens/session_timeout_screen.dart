@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/session_timer_provider.dart';
+import '../../services/parental_service.dart';
 import '../widgets/app_picto.dart';
 
 class SessionTimeoutScreen extends StatelessWidget {
@@ -55,7 +56,6 @@ class SessionTimeoutScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               const Spacer(),
-              // Szülői feloldó gomb (pl. PIN vagy hosszú nyomás védi)
               TextButton.icon(
                 style: TextButton.styleFrom(
                   foregroundColor: const Color(0xFF64748B),
@@ -75,58 +75,82 @@ class SessionTimeoutScreen extends StatelessWidget {
 
   void _showParentUnlockDialog(BuildContext context) {
     final controller = TextEditingController();
+    String? errorText;
+
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'Szülői feloldás',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('A folytatáshoz írd be a megoldást: 3 + 4 = ?'),
-            const SizedBox(height: 10),
-            TextField(
-              controller: controller,
-              keyboardType: TextInputType.number,
-              autofocus: true,
-              decoration: InputDecoration(
-                hintText: 'Válasz',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Row(
+            children: [
+              Icon(Icons.lock_rounded, color: Color(0xFF16A34A)),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Szülői feloldás',
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'A folytatáshoz add meg a 4 számjegyű szülői PIN-kódot:',
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                keyboardType: TextInputType.number,
+                obscureText: true,
+                maxLength: 4,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: 'PIN-kód (pl. 1234)',
+                  counterText: '',
+                  errorText: errorText,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Mégse'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF16A34A),
+              ),
+              onPressed: () async {
+                final pin = controller.text.trim();
+                final isValid = await ParentalService.verifyPin(pin);
+                if (isValid) {
+                  if (ctx.mounted) Navigator.pop(ctx);
+                  if (context.mounted) {
+                    context.read<SessionTimerProvider>().resetSession();
+                  }
+                } else {
+                  setDialogState(() {
+                    errorText = 'Helytelen PIN-kód!';
+                  });
+                }
+              },
+              child: const Text(
+                'Feloldás',
+                style: TextStyle(color: Colors.white),
               ),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Mégse'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF16A34A),
-            ),
-            onPressed: () {
-              if (controller.text.trim() == '7') {
-                Navigator.pop(ctx);
-                context.read<SessionTimerProvider>().resetSession();
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Helytelen válasz!')),
-                );
-              }
-            },
-            child: const Text(
-              'Feloldás',
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
       ),
     );
   }

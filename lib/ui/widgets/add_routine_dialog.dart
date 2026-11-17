@@ -63,7 +63,6 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
 
   void _removeStepField(int index) {
     if (_stepControllers.length > 1) {
-      // Ha éppen ezt a lépést vettük fel, leállítjuk
       if (_recordingIndex == index) {
         AudioService.instance.stopRecording();
         _recordingIndex = -1;
@@ -76,10 +75,8 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
     }
   }
 
-  // Hangfelvétel indítása vagy leállítása
   Future<void> _toggleRecording(int index) async {
     if (_recordingIndex == index) {
-      // Leállítás
       final path = await AudioService.instance.stopRecording();
       setState(() {
         _recordingIndex = -1;
@@ -88,7 +85,6 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
         }
       });
     } else {
-      // Ha máshol ment a felvétel, azt leállítjuk először
       if (_recordingIndex != -1) {
         await AudioService.instance.stopRecording();
       }
@@ -110,7 +106,6 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
     }
   }
 
-  // Rögzített hang visszahallgatása
   Future<void> _playRecordedAudio(int index) async {
     final path = _stepAudioPaths[index];
     if (path != null && File(path).existsSync()) {
@@ -118,7 +113,6 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
     }
   }
 
-  // Rögzített hang törlése az adott lépésről
   void _deleteAudio(int index) {
     setState(() {
       _stepAudioPaths[index] = null;
@@ -128,7 +122,6 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
   Future<void> _saveRoutine() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // Ha maradt futó felvétel, leállítjuk
     if (_recordingIndex != -1) {
       await AudioService.instance.stopRecording();
       _recordingIndex = -1;
@@ -145,7 +138,7 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
             id: '${routineId}_step_$i',
             title: text,
             icon: Icons.check_circle_outline_rounded,
-            audioPath: _stepAudioPaths[i], // <-- Mentjük a rögzített hangot!
+            audioPath: _stepAudioPaths[i],
           ),
         );
       }
@@ -174,6 +167,7 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 20),
       title: const Text(
         'Új rutin hozzáadása',
         style: TextStyle(fontWeight: FontWeight.bold),
@@ -206,8 +200,9 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
                   style: TextStyle(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 8,
                   children: _availableColors.map((color) {
                     return GestureDetector(
                       onTap: () => setState(() => _selectedColor = color),
@@ -246,7 +241,7 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
                     margin: const EdgeInsets.only(bottom: 8.0),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 8,
-                      vertical: 4,
+                      vertical: 6,
                     ),
                     decoration: BoxDecoration(
                       color: isThisRecording
@@ -262,7 +257,7 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
                     child: Row(
                       children: [
                         CircleAvatar(
-                          radius: 12,
+                          radius: 11,
                           backgroundColor: isThisRecording
                               ? const Color(0xFFEF4444)
                               : const Color(0xFFE2E8F0),
@@ -277,20 +272,23 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 6),
                         Expanded(
                           child: TextField(
                             controller: ctrl,
+                            style: const TextStyle(fontSize: 13.5),
                             decoration: InputDecoration(
-                              hintText: '${idx + 1}. lépés leírása',
+                              hintText: '${idx + 1}. lépés',
                               isDense: true,
                               border: InputBorder.none,
                             ),
                           ),
                         ),
 
-                        // Hangfelvétel / Stop gomb
+                        // Hangfelvétel / Stop gomb (kompakt méret)
                         IconButton(
+                          padding: const EdgeInsets.all(4),
+                          constraints: const BoxConstraints(),
                           icon: Icon(
                             isThisRecording
                                 ? Icons.stop_circle_rounded
@@ -302,7 +300,7 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
                                 : (hasAudio
                                       ? const Color(0xFF16A34A)
                                       : const Color(0xFF64748B)),
-                            size: 24,
+                            size: 21,
                           ),
                           tooltip: isThisRecording
                               ? 'Felvétel leállítása'
@@ -312,37 +310,46 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
                           onPressed: () => _toggleRecording(idx),
                         ),
 
-                        // Ha van rögzített hang, megjelenik a visszahallgató és törlő gomb
                         if (hasAudio && !isThisRecording) ...[
+                          const SizedBox(width: 2),
                           IconButton(
+                            padding: const EdgeInsets.all(4),
+                            constraints: const BoxConstraints(),
                             icon: const Icon(
                               Icons.play_circle_fill_rounded,
                               color: Color(0xFF2563EB),
-                              size: 24,
+                              size: 21,
                             ),
                             tooltip: 'Hang visszahallgatása',
                             onPressed: () => _playRecordedAudio(idx),
                           ),
+                          const SizedBox(width: 2),
                           IconButton(
+                            padding: const EdgeInsets.all(4),
+                            constraints: const BoxConstraints(),
                             icon: const Icon(
                               Icons.delete_outline_rounded,
                               color: Color(0xFF94A3B8),
-                              size: 20,
+                              size: 19,
                             ),
                             tooltip: 'Hang törlése',
                             onPressed: () => _deleteAudio(idx),
                           ),
                         ],
 
-                        if (_stepControllers.length > 1)
+                        if (_stepControllers.length > 1) ...[
+                          const SizedBox(width: 2),
                           IconButton(
+                            padding: const EdgeInsets.all(4),
+                            constraints: const BoxConstraints(),
                             icon: const Icon(
                               Icons.close_rounded,
                               color: Colors.redAccent,
-                              size: 20,
+                              size: 19,
                             ),
                             onPressed: () => _removeStepField(idx),
                           ),
+                        ],
                       ],
                     ),
                   );

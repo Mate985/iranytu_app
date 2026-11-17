@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/reward_provider.dart';
@@ -24,6 +25,18 @@ class WordQuestion {
   });
 }
 
+class _BaseWordItem {
+  final String word;
+  final String pictoEmoji;
+  final String? audioPath;
+
+  const _BaseWordItem({
+    required this.word,
+    required this.pictoEmoji,
+    this.audioPath,
+  });
+}
+
 class WordMatchGameScreen extends StatefulWidget {
   const WordMatchGameScreen({super.key});
 
@@ -32,69 +45,75 @@ class WordMatchGameScreen extends StatefulWidget {
 }
 
 class _WordMatchGameScreenState extends State<WordMatchGameScreen> {
-  final List<WordQuestion> _baseQuestions = const [
-    WordQuestion(
-      word: 'Cipő',
-      pictoEmoji: '👟',
-      options: ['Kabát', 'Cipő', 'Zokni'],
-    ),
-    WordQuestion(
+  final Random _random = Random();
+
+  final List<_BaseWordItem> _baseWordPool = const [
+    _BaseWordItem(word: 'Cipő', pictoEmoji: '👟'),
+    _BaseWordItem(
       word: 'Alma',
       pictoEmoji: '🍎',
       audioPath: 'assets/audio/words/alma.mp3',
-      options: ['Kenyér', 'Alma', 'Labda'],
     ),
-    WordQuestion(
-      word: 'Fogkefe',
-      pictoEmoji: '🪥',
-      options: ['Fogkefe', 'Szappan', 'Fésű'],
-    ),
-    WordQuestion(
-      word: 'Kabát',
-      pictoEmoji: '🧥',
-      options: ['Póló', 'Nadrág', 'Kabát'],
-    ),
-    WordQuestion(
+    _BaseWordItem(word: 'Fogkefe', pictoEmoji: '🪥'),
+    _BaseWordItem(word: 'Kabát', pictoEmoji: '🧥'),
+    _BaseWordItem(
       word: 'Autó',
       pictoEmoji: '🚗',
       audioPath: 'assets/audio/words/auto.mp3',
-      options: ['Autó', 'Vonat', 'Bicikli'],
     ),
-    WordQuestion(
-      word: 'Könyv',
-      pictoEmoji: '📖',
-      options: ['Füzet', 'Könyv', 'Levél'],
+    _BaseWordItem(word: 'Könyv', pictoEmoji: '📖'),
+    _BaseWordItem(word: 'Víz', pictoEmoji: '💧'),
+    _BaseWordItem(word: 'Ágy', pictoEmoji: '🛏️'),
+    _BaseWordItem(word: 'Tányér', pictoEmoji: '🍽️'),
+    _BaseWordItem(word: 'Hátizsák', pictoEmoji: '🎒'),
+    _BaseWordItem(word: 'Napocska', pictoEmoji: '☀️'),
+    _BaseWordItem(word: 'Ceruza', pictoEmoji: '✏️'),
+    _BaseWordItem(
+      word: 'Labda',
+      pictoEmoji: '⚽',
+      audioPath: 'assets/audio/words/labda.mp3',
     ),
-    WordQuestion(
-      word: 'Víz',
-      pictoEmoji: '💧',
-      options: ['Tej', 'Víz', 'Gyümölcslé'],
+    _BaseWordItem(
+      word: 'Cica',
+      pictoEmoji: '🐱',
+      audioPath: 'assets/audio/words/cica.mp3',
     ),
-    WordQuestion(
-      word: 'Ágy',
-      pictoEmoji: '🛏️',
-      options: ['Asztal', 'Szék', 'Ágy'],
+    _BaseWordItem(word: 'Kutya', pictoEmoji: '🐶'),
+    _BaseWordItem(
+      word: 'Maci',
+      pictoEmoji: '🐻',
+      audioPath: 'assets/audio/words/maci.mp3',
     ),
-    WordQuestion(
-      word: 'Tányér',
-      pictoEmoji: '🍽️',
-      options: ['Tányér', 'Pohár', 'Bögre'],
+    _BaseWordItem(
+      word: 'Virág',
+      pictoEmoji: '🌸',
+      audioPath: 'assets/audio/words/virag.mp3',
     ),
-    WordQuestion(
-      word: 'Hátizsák',
-      pictoEmoji: '🎒',
-      options: ['Kabát', 'Hátizsák', 'Tolltartó'],
+    _BaseWordItem(
+      word: 'Hal',
+      pictoEmoji: '🐟',
+      audioPath: 'assets/audio/words/hal.mp3',
     ),
-    WordQuestion(
-      word: 'Napocska',
-      pictoEmoji: '☀️',
-      options: ['Felhő', 'Hold', 'Napocska'],
+    _BaseWordItem(
+      word: 'Ház',
+      pictoEmoji: '🏠',
+      audioPath: 'assets/audio/words/haz.mp3',
     ),
-    WordQuestion(
-      word: 'Ceruza',
-      pictoEmoji: '✏️',
-      options: ['Olló', 'Vonalzó', 'Ceruza'],
+    _BaseWordItem(
+      word: 'Fa',
+      pictoEmoji: '🌳',
+      audioPath: 'assets/audio/words/fa.mp3',
     ),
+    _BaseWordItem(word: 'Banán', pictoEmoji: '🍌'),
+    _BaseWordItem(word: 'Eper', pictoEmoji: '🍓'),
+    _BaseWordItem(word: 'Vonat', pictoEmoji: '🚂'),
+    _BaseWordItem(word: 'Bicikli', pictoEmoji: '🚲'),
+    _BaseWordItem(word: 'Zokni', pictoEmoji: '🧦'),
+    _BaseWordItem(word: 'Póló', pictoEmoji: '👕'),
+    _BaseWordItem(word: 'Pohár', pictoEmoji: '🥛'),
+    _BaseWordItem(word: 'Kenyér', pictoEmoji: '🍞'),
+    _BaseWordItem(word: 'Szappan', pictoEmoji: '🧼'),
+    _BaseWordItem(word: 'Hold', pictoEmoji: '🌙'),
   ];
 
   List<WordQuestion> _activeQuestions = [];
@@ -109,39 +128,60 @@ class _WordMatchGameScreenState extends State<WordMatchGameScreen> {
     _buildActiveQuestions();
   }
 
+  List<String> _generateRandomOptions(
+    String correctWord,
+    List<String> fullWordPool,
+  ) {
+    final distractors = List<String>.from(fullWordPool)
+      ..removeWhere(
+        (w) => w.trim().toLowerCase() == correctWord.trim().toLowerCase(),
+      );
+    distractors.shuffle(_random);
+
+    final options = <String>[
+      correctWord,
+      if (distractors.isNotEmpty) distractors[0] else 'Labda',
+      if (distractors.length > 1) distractors[1] else 'Cipő',
+    ];
+    options.shuffle(_random);
+    return options;
+  }
+
   void _buildActiveQuestions() {
     final customTasks = context.read<CustomTaskProvider>().getTasksByCategory(
       'Kép és Szó',
     );
 
-    final List<WordQuestion> merged = List.from(_baseQuestions);
+    final allWords = <String>[
+      ..._baseWordPool.map((e) => e.word),
+      ...customTasks.map((t) => t.title.trim()),
+    ];
 
-    final List<String> allBaseWords = _baseQuestions
-        .map((q) => q.word)
-        .toList();
+    final List<WordQuestion> merged = [];
 
-    for (final task in customTasks) {
-      final fakeOptions = List<String>.from(allBaseWords)
-        ..removeWhere((w) => w.toLowerCase() == task.title.toLowerCase());
-      fakeOptions.shuffle();
-
-      final opts = [
-        task.title,
-        fakeOptions.isNotEmpty ? fakeOptions[0] : 'Labda',
-        fakeOptions.length > 1 ? fakeOptions[1] : 'Cipő',
-      ]..shuffle();
-
+    for (final base in _baseWordPool) {
       merged.add(
         WordQuestion(
-          word: task.title,
-          imagePath: task.imagePath,
-          audioPath: task.audioPath,
-          options: opts,
+          word: base.word,
+          pictoEmoji: base.pictoEmoji,
+          audioPath: base.audioPath,
+          options: _generateRandomOptions(base.word, allWords),
         ),
       );
     }
 
-    merged.shuffle();
+    for (final task in customTasks) {
+      merged.add(
+        WordQuestion(
+          word: task.title.trim(),
+          imagePath: task.imagePath,
+          audioPath: task.audioPath,
+          options: _generateRandomOptions(task.title.trim(), allWords),
+        ),
+      );
+    }
+
+    merged.shuffle(_random);
 
     setState(() {
       _activeQuestions = merged;
@@ -153,7 +193,14 @@ class _WordMatchGameScreenState extends State<WordMatchGameScreen> {
 
   WordQuestion get _currentQuestion => _activeQuestions.isNotEmpty
       ? _activeQuestions[_currentIndex]
-      : _baseQuestions[0];
+      : WordQuestion(
+          word: 'Cipő',
+          pictoEmoji: '👟',
+          options: _generateRandomOptions(
+            'Cipő',
+            _baseWordPool.map((e) => e.word).toList(),
+          ),
+        );
 
   void _onOptionSelected(String option) {
     if (_isAnswered) return;
@@ -210,8 +257,13 @@ class _WordMatchGameScreenState extends State<WordMatchGameScreen> {
   }
 
   void _nextQuestion() {
+    if (_currentIndex + 1 >= _activeQuestions.length) {
+      _buildActiveQuestions();
+      return;
+    }
+
     setState(() {
-      _currentIndex = (_currentIndex + 1) % _activeQuestions.length;
+      _currentIndex++;
       _selectedOption = null;
       _isAnswered = false;
     });
@@ -245,13 +297,18 @@ class _WordMatchGameScreenState extends State<WordMatchGameScreen> {
         foregroundColor: isDark
             ? const Color(0xFFF8FAFC)
             : const Color(0xFF1E293B),
-        centerTitle: true,
-        title: Text(
-          'Kép és Szó Kaland 🧩',
-          style: TextStyle(
-            color: isDark ? const Color(0xFFF8FAFC) : const Color(0xFF1E293B),
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
+        centerTitle: false,
+        titleSpacing: 0,
+        title: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            'Kép és Szó Kaland 🧩',
+            style: TextStyle(
+              color: isDark ? const Color(0xFFF8FAFC) : const Color(0xFF1E293B),
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+            ),
           ),
         ),
         actions: [
@@ -259,10 +316,7 @@ class _WordMatchGameScreenState extends State<WordMatchGameScreen> {
             builder: (context, rewardProv, child) {
               return Container(
                 margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: isDark
                       ? const Color(0xFF854D0E).withValues(alpha: 0.35)
@@ -280,14 +334,14 @@ class _WordMatchGameScreenState extends State<WordMatchGameScreen> {
                     const Icon(
                       Icons.star_rounded,
                       color: Color(0xFFFBBF24),
-                      size: 20,
+                      size: 18,
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: 3),
                     Text(
                       '${rewardProv.totalStars}',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        fontSize: 15,
+                        fontSize: 14,
                         color: isDark
                             ? const Color(0xFFFEF08A)
                             : const Color(0xFF854D0E),
@@ -299,10 +353,12 @@ class _WordMatchGameScreenState extends State<WordMatchGameScreen> {
             },
           ),
           IconButton(
+            padding: const EdgeInsets.all(6),
+            constraints: const BoxConstraints(),
             icon: Icon(
               Icons.spa_rounded,
               color: isDark ? const Color(0xFF81C784) : const Color(0xFF2E7D32),
-              size: 26,
+              size: 25,
             ),
             tooltip: 'Nyugizóna',
             onPressed: () {

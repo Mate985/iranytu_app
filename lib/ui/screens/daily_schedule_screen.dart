@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../data/models/daily_schedule_model.dart';
 import '../../providers/routine_provider.dart';
 import '../../providers/reward_provider.dart';
 import '../../services/app_settings_service.dart';
@@ -20,6 +21,7 @@ class DailyScheduleScreen extends StatefulWidget {
 class _DailyScheduleScreenState extends State<DailyScheduleScreen> {
   Timer? _scheduleTimer;
   final Set<String> _alertedScheduleKeys = {};
+  final Set<int> _togglingScheduleIds = {};
 
   final List<String> _dayNames = const [
     'Hétfő',
@@ -87,7 +89,7 @@ class _DailyScheduleScreenState extends State<DailyScheduleScreen> {
 
       if (scheduleId == null ||
           scheduledTime == null ||
-          item.schedule.status == 'COMPLETED') {
+          item.schedule.status == TaskStatus.completed) {
         continue;
       }
 
@@ -109,23 +111,39 @@ class _DailyScheduleScreenState extends State<DailyScheduleScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scaffoldBg = isDark
+        ? const Color(0xFF0F172A)
+        : const Color(0xFFF8FAFC);
+    final headerBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final primaryTextColor = isDark
+        ? const Color(0xFFF8FAFC)
+        : const Color(0xFF1E293B);
+    final secondaryTextColor = isDark
+        ? const Color(0xFF94A3B8)
+        : const Color(0xFF64748B);
+    final dividerColor = isDark
+        ? const Color(0xFF334155)
+        : const Color(0xFFE2E8F0);
+
     return Consumer<RoutineProvider>(
       builder: (context, provider, child) {
         final currentSelectedDay = provider.selectedDay;
         final selectedDayName = _dayNames[currentSelectedDay - 1];
 
         return Scaffold(
-          backgroundColor: const Color(0xFFF8FAFC),
+          backgroundColor: scaffoldBg,
           appBar: AppBar(
             elevation: 0,
-            backgroundColor: Colors.white,
+            backgroundColor: headerBg,
+            foregroundColor: primaryTextColor,
             centerTitle: true,
             title: FittedBox(
               fit: BoxFit.scaleDown,
               child: Text(
                 'Napirend – $selectedDayName',
-                style: const TextStyle(
-                  color: Color(0xFF1E293B),
+                style: TextStyle(
+                  color: primaryTextColor,
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
                 ),
@@ -176,7 +194,7 @@ class _DailyScheduleScreenState extends State<DailyScheduleScreen> {
             children: [
               // Heti napválasztó sáv
               Container(
-                color: Colors.white,
+                color: headerBg,
                 padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
                 child: Row(
                   children: List.generate(7, (index) {
@@ -215,7 +233,7 @@ class _DailyScheduleScreenState extends State<DailyScheduleScreen> {
                                       ? Colors.white
                                       : (isToday
                                             ? const Color(0xFF81C784)
-                                            : const Color(0xFF64748B)),
+                                            : secondaryTextColor),
                                 ),
                               ),
                               const SizedBox(height: 2),
@@ -225,7 +243,9 @@ class _DailyScheduleScreenState extends State<DailyScheduleScreen> {
                                   fontSize: 11,
                                   color: isSelected
                                       ? Colors.white70
-                                      : const Color(0xFF94A3B8),
+                                      : (isDark
+                                            ? const Color(0xFF64748B)
+                                            : const Color(0xFF94A3B8)),
                                 ),
                               ),
                             ],
@@ -236,7 +256,7 @@ class _DailyScheduleScreenState extends State<DailyScheduleScreen> {
                   }),
                 ),
               ),
-              const Divider(height: 1, thickness: 1, color: Color(0xFFE2E8F0)),
+              Divider(height: 1, thickness: 1, color: dividerColor),
 
               // Feladatlista az adott napra
               Expanded(
@@ -250,7 +270,7 @@ class _DailyScheduleScreenState extends State<DailyScheduleScreen> {
                             Icon(
                               Icons.event_note_rounded,
                               size: 64,
-                              color: Colors.grey.shade400,
+                              color: secondaryTextColor,
                             ),
                             const SizedBox(height: 12),
                             Text(
@@ -258,7 +278,7 @@ class _DailyScheduleScreenState extends State<DailyScheduleScreen> {
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.grey.shade600,
+                                color: secondaryTextColor,
                               ),
                             ),
                           ],
@@ -337,33 +357,47 @@ class _DailyScheduleScreenState extends State<DailyScheduleScreen> {
                             },
                             child: TaskCard(
                               item: item,
-                              onToggle: () {
-                                final currentlyCompleted =
-                                    item.schedule.status == 'COMPLETED';
-                                final willBeCompleted = !currentlyCompleted;
+                              onToggle: () async {
+                                final scheduleId = item.schedule.id;
+                                if (scheduleId == null) return;
+                                if (_togglingScheduleIds.contains(scheduleId)) {
+                                  return;
+                                }
 
-                                provider.toggleTaskCompletion(
-                                  item.schedule.id!,
-                                  currentlyCompleted,
-                                );
+                                _togglingScheduleIds.add(scheduleId);
+                                try {
+                                  final currentlyCompleted =
+                                      item.schedule.status ==
+                                      TaskStatus.completed;
+                                  final willBeCompleted = !currentlyCompleted;
 
-                                final starsEarned = item.task.rewardPoints > 0
-                                    ? item.task.rewardPoints
-                                    : 1;
+                                  await provider.toggleTaskCompletion(
+                                    scheduleId,
+                                    currentlyCompleted,
+                                  );
 
-                                if (willBeCompleted) {
-                                  context.read<RewardProvider>().addStars(
-                                    starsEarned,
-                                  );
-                                  RewardCelebrationDialog.show(
-                                    context,
-                                    earnedStars: starsEarned,
-                                    taskTitle: item.task.title,
-                                  );
-                                } else {
-                                  context.read<RewardProvider>().removeStars(
-                                    starsEarned,
-                                  );
+                                  if (!context.mounted) return;
+
+                                  final starsEarned = item.task.rewardPoints > 0
+                                      ? item.task.rewardPoints
+                                      : 1;
+
+                                  if (willBeCompleted) {
+                                    context.read<RewardProvider>().addStars(
+                                      starsEarned,
+                                    );
+                                    RewardCelebrationDialog.show(
+                                      context,
+                                      earnedStars: starsEarned,
+                                      taskTitle: item.task.title,
+                                    );
+                                  } else {
+                                    context.read<RewardProvider>().removeStars(
+                                      starsEarned,
+                                    );
+                                  }
+                                } finally {
+                                  _togglingScheduleIds.remove(scheduleId);
                                 }
                               },
                             ),

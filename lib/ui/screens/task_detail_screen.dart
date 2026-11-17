@@ -37,19 +37,28 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     _remainingSeconds = _totalSeconds;
   }
 
+  bool get _hasTaskAudio {
+    final path = widget.item.task.audioPath;
+    return path != null && path.isNotEmpty;
+  }
+
   Future<void> _playTaskAudio() async {
     final task = widget.item.task;
-    await AudioService.instance.speakOrPlay(
-      text: task.ttsText.isNotEmpty ? task.ttsText : task.title,
-      audioPath: task.audioPath,
-    );
+    if (task.audioPath != null && task.audioPath!.isNotEmpty) {
+      await AudioService.instance.speakOrPlay(
+        text: task.ttsText.isNotEmpty ? task.ttsText : task.title,
+        audioPath: task.audioPath,
+      );
+    }
   }
 
   Future<void> _playStepAudio(SubtaskModel subtask) async {
-    await AudioService.instance.speakOrPlay(
-      text: subtask.description,
-      audioPath: subtask.audioPath,
-    );
+    if (subtask.audioPath != null && subtask.audioPath!.isNotEmpty) {
+      await AudioService.instance.speakOrPlay(
+        text: subtask.description,
+        audioPath: subtask.audioPath,
+      );
+    }
   }
 
   @override
@@ -153,7 +162,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Instrukciós szöveg kártya felolvasó / lejátszó gombbal
+                  // Instrukciós szöveg kártya (hangszóró csak saját hangfelvételnél)
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(
@@ -176,16 +185,18 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          iconSize: 32,
-                          tooltip: 'Hang lejátszása',
-                          icon: const Icon(
-                            Icons.volume_up_rounded,
-                            color: Color(0xFF2563EB),
+                        if (_hasTaskAudio) ...[
+                          const SizedBox(width: 8),
+                          IconButton(
+                            iconSize: 32,
+                            tooltip: 'Hang lejátszása',
+                            icon: const Icon(
+                              Icons.volume_up_rounded,
+                              color: Color(0xFF2563EB),
+                            ),
+                            onPressed: _playTaskAudio,
                           ),
-                          onPressed: _playTaskAudio,
-                        ),
+                        ],
                       ],
                     ),
                   ),
@@ -322,6 +333,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                             final isDone = _completedStepIds.contains(
                               subtask.id,
                             );
+                            final hasStepAudio =
+                                subtask.audioPath != null &&
+                                subtask.audioPath!.isNotEmpty;
 
                             return Card(
                               elevation: 0,
@@ -338,7 +352,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                                   ? const Color(0xFFF1F8E9)
                                   : Colors.white,
                               child: ListTile(
-                                onTap: () => _playStepAudio(subtask),
+                                onTap: hasStepAudio
+                                    ? () => _playStepAudio(subtask)
+                                    : null,
                                 leading: CircleAvatar(
                                   radius: 16,
                                   backgroundColor: isDone
@@ -364,15 +380,17 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                                 trailing: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.volume_up_rounded,
-                                        color: Color(0xFF3B82F6),
-                                        size: 22,
+                                    if (hasStepAudio)
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.volume_up_rounded,
+                                          color: Color(0xFF3B82F6),
+                                          size: 22,
+                                        ),
+                                        tooltip: 'Hang lejátszása',
+                                        onPressed: () =>
+                                            _playStepAudio(subtask),
                                       ),
-                                      tooltip: 'Lépés felmondása',
-                                      onPressed: () => _playStepAudio(subtask),
-                                    ),
                                     IconButton(
                                       icon: Icon(
                                         isDone

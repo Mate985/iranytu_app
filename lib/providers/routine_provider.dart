@@ -24,13 +24,11 @@ class RoutineProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   int get selectedDay => _selectedDay;
 
-  // Kiválasztott nap módosítása – mindig frissíti az adatokat az adatbázisból
   void selectDay(int day) {
     _selectedDay = day;
     loadScheduleForSelectedDay(showLoading: true);
   }
 
-  // A kiválasztott naphoz tartozó feladatok lekérdezése
   Future<void> loadScheduleForSelectedDay({bool showLoading = false}) async {
     if (showLoading) {
       _isLoading = true;
@@ -59,12 +57,10 @@ class RoutineProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Visszafelé kompatibilitás
   Future<void> loadTodaySchedule() async {
     await loadScheduleForSelectedDay(showLoading: true);
   }
 
-  // Pipálás átváltása
   Future<void> toggleTaskCompletion(
     int scheduleId,
     bool isCurrentlyCompleted,
@@ -73,10 +69,8 @@ class RoutineProvider extends ChangeNotifier {
     await _dbHelper.updateScheduleCompletion(scheduleId, newStatus);
 
     if (newStatus) {
-      // Ha elvégezték, visszavonjuk az értesítést (pontosat és előjelzést is)
       await NotificationService.instance.cancelReminder(scheduleId);
     } else {
-      // Ha visszavonták a pipát, újraaktiváljuk az értesítést
       final scheduleItem = _todayTasks.firstWhere(
         (item) => item.schedule.id == scheduleId,
       );
@@ -86,18 +80,15 @@ class RoutineProvider extends ChangeNotifier {
     await loadScheduleForSelectedDay(showLoading: false);
   }
 
-  // Törlés a napirendből
   Future<void> removeTaskFromSchedule(int scheduleId) async {
     await NotificationService.instance.cancelReminder(scheduleId);
     await _dbHelper.deleteSchedule(scheduleId);
     await loadScheduleForSelectedDay(showLoading: false);
   }
 
-  // Időpont szerkesztése
   Future<void> updateTaskTime(int scheduleId, String newTime) async {
     await _dbHelper.updateScheduleTime(scheduleId, newTime);
 
-    // Keresés és az időzített értesítés frissítése
     final index = _todayTasks.indexWhere(
       (item) => item.schedule.id == scheduleId,
     );
@@ -116,7 +107,6 @@ class RoutineProvider extends ChangeNotifier {
     await loadScheduleForSelectedDay(showLoading: false);
   }
 
-  // Új feladat felvétele az aktuálisan kiválasztott naphoz
   Future<void> addNewTaskWithSchedule({
     required String title,
     required String ttsText,
@@ -125,6 +115,7 @@ class RoutineProvider extends ChangeNotifier {
     required String scheduledTime,
     required String colorCode,
     required List<String> stepDescriptions,
+    List<String?>? stepAudioPaths,
     String iconPath = 'brush',
     int? targetDay,
   }) async {
@@ -143,17 +134,24 @@ class RoutineProvider extends ChangeNotifier {
       ),
     );
 
-    // 2. Mikrolépések mentése
+    // 2. Mikrolépések mentése (saját hangfelvételekkel együtt)
+    int savedOrder = 1;
     for (int i = 0; i < stepDescriptions.length; i++) {
-      if (stepDescriptions[i].trim().isNotEmpty) {
+      final desc = stepDescriptions[i].trim();
+      if (desc.isNotEmpty) {
+        final stepAudio = (stepAudioPaths != null && i < stepAudioPaths.length)
+            ? stepAudioPaths[i]
+            : null;
         await _dbHelper.insertSubtask(
           SubtaskModel(
             taskId: taskId,
-            stepOrder: i + 1,
-            description: stepDescriptions[i].trim(),
+            stepOrder: savedOrder,
+            description: desc,
             iconPath: iconPath,
+            audioPath: stepAudio,
           ),
         );
+        savedOrder++;
       }
     }
 
@@ -163,7 +161,7 @@ class RoutineProvider extends ChangeNotifier {
       taskId: taskId,
       dayOfWeek: dayToAssign,
       orderIndex: nextOrder,
-      status: TaskStatus.pending, // Típusbiztos kezdőérték enumként
+      status: TaskStatus.pending,
       scheduledTime: scheduledTime,
     );
     final scheduleId = await _dbHelper.insertSchedule(scheduleModel);
@@ -190,7 +188,6 @@ class RoutineProvider extends ChangeNotifier {
     await loadScheduleForSelectedDay(showLoading: false);
   }
 
-  // Belső segédfüggvény: Értesítés időzítése (pontos + előjelzés)
   Future<void> _scheduleNotificationForItem(ScheduledTaskItem item) async {
     final scheduleId = item.schedule.id;
     final timeStr = item.schedule.scheduledTime;
@@ -199,7 +196,6 @@ class RoutineProvider extends ChangeNotifier {
       return;
     }
 
-    // 1. Ellenőrizzük, engedélyezve vannak-e a rendszerértesítések
     final notificationsEnabled =
         await AppSettingsService.areNotificationsEnabled();
     if (!notificationsEnabled) {
@@ -217,7 +213,6 @@ class RoutineProvider extends ChangeNotifier {
         ? item.task.ttsText
         : 'Itt az ideje a következő feladatnak!';
 
-    // 2. Pontos időpont ütemezése
     await NotificationService.instance.scheduleTaskReminder(
       id: scheduleId,
       title: 'Feladat: ${item.task.title}',
@@ -227,7 +222,6 @@ class RoutineProvider extends ChangeNotifier {
       dayOfWeek: item.schedule.dayOfWeek,
     );
 
-    // 3. Közelgő feladat előjelzésének ütemezése (szülői beállítás alapján)
     final advanceMinutes = await AppSettingsService.getRoutineReminderMinutes();
     if (advanceMinutes > 0) {
       await NotificationService.instance.scheduleAdvanceReminder(
@@ -239,12 +233,10 @@ class RoutineProvider extends ChangeNotifier {
         advanceMinutes: advanceMinutes,
       );
     } else {
-      // Ha 0 (kikapcsolva), visszavonjuk az esetleges korábbi előjelzést
       await NotificationService.instance.cancelReminder(scheduleId + 500000);
     }
   }
 
-  // Összes értesítés újratervezése (pl. szülői beállítások mentése után)
   Future<void> rescheduleAllNotifications() async {
     final notificationsEnabled =
         await AppSettingsService.areNotificationsEnabled();
@@ -258,7 +250,6 @@ class RoutineProvider extends ChangeNotifier {
     for (int day = 1; day <= 7; day++) {
       final schedules = await _dbHelper.getSchedulesForDay(day);
       for (final schedule in schedules) {
-        // Típusbiztos vizsgálat: kizárja a kis/nagybetűs string elcsúszást!
         if (schedule.status != TaskStatus.completed) {
           final task = allTasks.firstWhere(
             (t) => t.id == schedule.taskId,

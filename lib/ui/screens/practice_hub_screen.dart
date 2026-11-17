@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/reward_provider.dart';
+import '../../providers/session_timer_provider.dart';
 import 'calm_room_screen.dart';
 import 'word_match_game_screen.dart';
 import 'routine_sequence_game_screen.dart';
@@ -8,13 +9,30 @@ import 'trace_shape_game_screen.dart';
 import 'number_explorer_game_screen.dart';
 import 'letter_trace_screen.dart';
 import 'word_builder_game_screen.dart';
+import 'memory_game_screen.dart';
+import 'odd_one_out_game_screen.dart';
+import 'session_timeout_screen.dart';
 
 class PracticeHubScreen extends StatelessWidget {
   const PracticeHubScreen({super.key});
 
+  void _openGame(BuildContext context, Widget gameScreen) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => _GameSessionGuard(child: gameScreen),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final timerProv = context.watch<SessionTimerProvider>();
+
+    if (timerProv.isTimeUp) {
+      return const SessionTimeoutScreen();
+    }
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -39,6 +57,45 @@ class PracticeHubScreen extends StatelessWidget {
           ),
         ),
         actions: [
+          if (timerProv.hasLimit)
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? const Color(0xFF1E3A8A).withValues(alpha: 0.4)
+                    : const Color(0xFFDBEAFE),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: isDark
+                      ? const Color(0xFF3B82F6)
+                      : const Color(0xFF93C5FD),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.timer_outlined,
+                    color: isDark
+                        ? const Color(0xFF93C5FD)
+                        : const Color(0xFF1D4ED8),
+                    size: 16,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    timerProv.formattedRemainingTime,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: isDark
+                          ? const Color(0xFFDBEAFE)
+                          : const Color(0xFF1E3A8A),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           Consumer<RewardProvider>(
             builder: (context, rewardProv, child) {
               return Container(
@@ -174,6 +231,44 @@ class PracticeHubScreen extends StatelessWidget {
 
           _buildGameCard(
             context: context,
+            title: 'Memória Párkereső 🧠',
+            subtitle: 'Fordítsd fel a kártyákat és találd meg a párokat!',
+            icon: Icons.grid_view_rounded,
+            cardColor: isDark
+                ? const Color(0xFF0F766E).withValues(alpha: 0.35)
+                : const Color(0xFFCCFBF1),
+            borderColor: isDark
+                ? const Color(0xFF14B8A6).withValues(alpha: 0.5)
+                : const Color(0xFF99F6E4),
+            accentColor: isDark
+                ? const Color(0xFF2DD4BF)
+                : const Color(0xFF0D9488),
+            rewardStars: 2,
+            onTap: () => _openGame(context, const MemoryGameScreen()),
+          ),
+          const SizedBox(height: 14),
+
+          _buildGameCard(
+            context: context,
+            title: 'Kakukktojás Kereső 🐣',
+            subtitle: 'Melyik nem illik a többi közé? Találd meg!',
+            icon: Icons.rule_rounded,
+            cardColor: isDark
+                ? const Color(0xFFB45309).withValues(alpha: 0.3)
+                : const Color(0xFFFEF3C7),
+            borderColor: isDark
+                ? const Color(0xFFF59E0B).withValues(alpha: 0.5)
+                : const Color(0xFFFDE68A),
+            accentColor: isDark
+                ? const Color(0xFFFBBF24)
+                : const Color(0xFFD97706),
+            rewardStars: 2,
+            onTap: () => _openGame(context, const OddOneOutGameScreen()),
+          ),
+          const SizedBox(height: 14),
+
+          _buildGameCard(
+            context: context,
             title: 'Beszélő Számtábla',
             subtitle: 'Ismerd meg a számokat játékosan hanggal és képpel!',
             icon: Icons.pin_rounded,
@@ -187,14 +282,7 @@ class PracticeHubScreen extends StatelessWidget {
                 ? const Color(0xFF38BDF8)
                 : const Color(0xFF0284C7),
             rewardStars: 2,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const NumberExplorerGameScreen(),
-                ),
-              );
-            },
+            onTap: () => _openGame(context, const NumberExplorerGameScreen()),
           ),
           const SizedBox(height: 14),
 
@@ -213,14 +301,7 @@ class PracticeHubScreen extends StatelessWidget {
                 ? const Color(0xFFFBBF24)
                 : const Color(0xFFD97706),
             rewardStars: 2,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const WordMatchGameScreen(),
-                ),
-              );
-            },
+            onTap: () => _openGame(context, const WordMatchGameScreen()),
           ),
           const SizedBox(height: 14),
 
@@ -239,14 +320,7 @@ class PracticeHubScreen extends StatelessWidget {
                 ? const Color(0xFF4ADE80)
                 : const Color(0xFF16A34A),
             rewardStars: 2,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const RoutineSequenceGameScreen(),
-                ),
-              );
-            },
+            onTap: () => _openGame(context, const RoutineSequenceGameScreen()),
           ),
           const SizedBox(height: 14),
 
@@ -265,14 +339,7 @@ class PracticeHubScreen extends StatelessWidget {
                 ? const Color(0xFFC084FC)
                 : const Color(0xFF9333EA),
             rewardStars: 1,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const TraceShapeGameScreen(),
-                ),
-              );
-            },
+            onTap: () => _openGame(context, const TraceShapeGameScreen()),
           ),
           const SizedBox(height: 14),
 
@@ -291,14 +358,7 @@ class PracticeHubScreen extends StatelessWidget {
                 ? const Color(0xFF60A5FA)
                 : const Color(0xFF2563EB),
             rewardStars: 1,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const LetterTraceScreen(),
-                ),
-              );
-            },
+            onTap: () => _openGame(context, const LetterTraceScreen()),
           ),
           const SizedBox(height: 14),
 
@@ -317,14 +377,7 @@ class PracticeHubScreen extends StatelessWidget {
                 ? const Color(0xFFF87171)
                 : const Color(0xFFDC2626),
             rewardStars: 2,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const WordBuilderGameScreen(),
-                ),
-              );
-            },
+            onTap: () => _openGame(context, const WordBuilderGameScreen()),
           ),
         ],
       ),
@@ -442,5 +495,24 @@ class PracticeHubScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _GameSessionGuard extends StatelessWidget {
+  final Widget child;
+
+  const _GameSessionGuard({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final isTimeUp = context.select<SessionTimerProvider, bool>(
+      (prov) => prov.isTimeUp,
+    );
+
+    if (isTimeUp) {
+      return const SessionTimeoutScreen();
+    }
+
+    return child;
   }
 }

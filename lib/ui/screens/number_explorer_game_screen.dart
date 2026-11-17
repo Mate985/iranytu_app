@@ -136,7 +136,6 @@ class _NumberExplorerGameScreenState extends State<NumberExplorerGameScreen> {
       } else if (_quizType == QuizTaskType.listenAndFind) {
         _targetNumber = _random.nextInt(_maxRange) + 1;
         _pageOffset = ((_targetNumber - 1) ~/ _pageSize) * _pageSize;
-        // A kérdés hangja mindig lefut a te hangodon
         _speakText(
           'Keresd meg a(z) $_targetNumber számot a táblán!',
           audioPath: 'assets/audio/words/keresd_meg_ezt_a_szamot.mp3',
@@ -166,14 +165,12 @@ class _NumberExplorerGameScreenState extends State<NumberExplorerGameScreen> {
   }
 
   void _speakText(String text, {String? audioPath}) {
-    // Ha van audioPath, azt játssza le, ha nincs, a Google TTS mondja be
     AudioService.instance.speakOrPlay(text: text, audioPath: audioPath);
   }
 
   void _onNumberTapped(int number) {
     if (_isTransitioning) return;
 
-    // 1-10 között a saját felvételed, 10 felett Google TTS
     final audioPath = (number >= 1 && number <= 10)
         ? 'assets/audio/words/$number.mp3'
         : null;
@@ -246,13 +243,18 @@ class _NumberExplorerGameScreenState extends State<NumberExplorerGameScreen> {
         foregroundColor: isDark
             ? const Color(0xFFF8FAFC)
             : const Color(0xFF1E293B),
-        centerTitle: true,
-        title: Text(
-          'Beszélő Számtábla',
-          style: TextStyle(
-            color: isDark ? const Color(0xFFF8FAFC) : const Color(0xFF1E293B),
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
+        centerTitle: false,
+        titleSpacing: 0,
+        title: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            'Beszélő Számtábla',
+            style: TextStyle(
+              color: isDark ? const Color(0xFFF8FAFC) : const Color(0xFF1E293B),
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+            ),
           ),
         ),
         actions: [
@@ -260,10 +262,7 @@ class _NumberExplorerGameScreenState extends State<NumberExplorerGameScreen> {
             builder: (context, rewardProv, child) {
               return Container(
                 margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: isDark
                       ? const Color(0xFF854D0E).withValues(alpha: 0.35)
@@ -281,14 +280,14 @@ class _NumberExplorerGameScreenState extends State<NumberExplorerGameScreen> {
                     const Icon(
                       Icons.star_rounded,
                       color: Color(0xFFFBBF24),
-                      size: 20,
+                      size: 18,
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: 3),
                     Text(
                       '${rewardProv.totalStars}',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        fontSize: 15,
+                        fontSize: 14,
                         color: isDark
                             ? const Color(0xFFFEF08A)
                             : const Color(0xFF854D0E),
@@ -300,10 +299,12 @@ class _NumberExplorerGameScreenState extends State<NumberExplorerGameScreen> {
             },
           ),
           IconButton(
+            padding: const EdgeInsets.all(6),
+            constraints: const BoxConstraints(),
             icon: Icon(
               Icons.spa_rounded,
               color: isDark ? const Color(0xFF81C784) : const Color(0xFF2E7D32),
-              size: 26,
+              size: 25,
             ),
             tooltip: 'Nyugizóna',
             onPressed: () {

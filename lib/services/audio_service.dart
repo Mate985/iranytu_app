@@ -19,7 +19,6 @@ class AudioService {
 
   bool get isRecording => _isRecording;
 
-  /// Futásidejű mikrofon engedély ellenőrzése és kérése
   Future<bool> checkAndRequestPermission() async {
     final status = await Permission.microphone.status;
     if (status.isGranted) return true;
@@ -28,7 +27,6 @@ class AudioService {
     return result.isGranted;
   }
 
-  /// Hangfelvétel indítása (Szülői egyedi felvételhez)
   Future<bool> startRecording() async {
     try {
       final hasPermission = await checkAndRequestPermission();
@@ -55,7 +53,6 @@ class AudioService {
     }
   }
 
-  /// Hangfelvétel leállítása
   Future<String?> stopRecording() async {
     try {
       final path = await _audioRecorder.stop();
@@ -68,13 +65,13 @@ class AudioService {
     }
   }
 
-  /// Telefonon tárolt egyedi szülői hangfájl lejátszása
   Future<bool> playAudio(String filePath) async {
     try {
       await stopAll();
-      final file = File(filePath);
+      final cleanPath = filePath.replaceFirst('file://', '').trim();
+      final file = File(cleanPath);
       if (file.existsSync()) {
-        await _audioPlayer.play(DeviceFileSource(filePath));
+        await _audioPlayer.play(DeviceFileSource(cleanPath));
         return true;
       }
       return false;
@@ -84,7 +81,6 @@ class AudioService {
     }
   }
 
-  /// Beépített Asset hang ellenőrzése és lejátszása
   Future<bool> playAsset(String assetPath) async {
     try {
       await stopAll();
@@ -97,65 +93,53 @@ class AudioService {
         fullAssetPath = 'assets/$fullAssetPath';
       }
 
-      // Valóban benne van-e a csomagolt assetek között?
       try {
         await rootBundle.load(fullAssetPath);
       } catch (notFound) {
-        debugPrint("⚠️ Nem található az Asset fájl: $fullAssetPath");
         return false;
       }
 
-      // Az audioplayers AssetSource alapértelmezetten 'assets/' elé fűz, ezért levágjuk
       final cleanPath = fullAssetPath.replaceFirst('assets/', '');
-
-      debugPrint("Asset lejátszása -> '$cleanPath'");
       await _audioPlayer.play(AssetSource(cleanPath));
       return true;
-    } catch (e, stack) {
+    } catch (e) {
       debugPrint("Hiba az asset hang lejátszásakor ($assetPath): $e");
-      debugPrint("Hiba részletei: $stack");
       return false;
     }
   }
 
-  /// Intelligens hanglejátszás:
-  /// Azonnal leállítja a futó TTS-t és audio-t.
-  /// Ha van érvényes felvett hang, NEM engedi megszólalni a Google TTS robotot!
+  /// Ha van érvényes saját felvett hang vagy létező asset, CSAK azt játssza le.
+  /// A Google TTS robothang kizárólag akkor szólal meg, ha nincs saját felvétel!
   Future<void> speakOrPlay({required String text, String? audioPath}) async {
-    debugPrint(
-      "speakOrPlay hívás -> szöveg: '$text' | audioPath: '$audioPath'",
-    );
-
-    // 1. Azonnal csendesítünk minden korábbi hangot és felolvasást
     await stopAll();
 
-    // 2. Ha meg van adva audioPath, megpróbáljuk lejátszani
-    if (audioPath != null && audioPath.trim().isNotEmpty) {
-      if (audioPath.contains('assets/')) {
-        final success = await playAsset(audioPath);
+    final rawPath = audioPath?.trim() ?? '';
+
+    if (rawPath.isNotEmpty) {
+      if (rawPath.contains('assets/')) {
+        // Beépített útvonal: ha létezik a fájl, lejátsszuk; ha nem létezik, jöhet a TTS
+        final success = await playAsset(rawPath);
         if (success) return;
-      } else if (File(audioPath).existsSync()) {
-        final success = await playAudio(audioPath);
-        if (success) return;
+      } else {
+        // Szülő által rögzített saját hangfájl: lejátsszuk, és SOHA nem engedjük rá a TTS-t
+        final cleanPath = rawPath.replaceFirst('file://', '');
+        if (File(cleanPath).existsSync()) {
+          await playAudio(cleanPath);
+          return;
+        }
       }
     }
 
-    // 3. Csak akkor nyúl a robot TTS-hez, ha egyáltalán nem volt megadva audioPath
-    if (audioPath == null || audioPath.trim().isEmpty) {
-      debugPrint("Nincs egyedi hang megadva, tartalék TTS szólal meg: '$text'");
+    // Ha nem volt saját hangfájl (vagy a beépített asset nem létezett), a Google TTS szólal meg
+    if (text.trim().isNotEmpty) {
       await TtsService.instance.speak(text);
-    } else {
-      debugPrint(
-        "⚠️ Az audioPath meg volt adva ($audioPath), de nem sikerült lejátszani. A TTS némítva maradt a kettős beszéd elkerülése érdekében.",
-      );
     }
   }
 
-  /// Minden hang azonnali leállítása
   Future<void> stopAll() async {
     try {
-      await _audioPlayer.stop();
       await TtsService.instance.stop();
+      await _audioPlayer.stop();
     } catch (e) {
       debugPrint("Hiba a hang leállításakor: $e");
     }

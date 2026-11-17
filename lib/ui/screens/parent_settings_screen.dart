@@ -1,6 +1,10 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../services/parental_service.dart';
 import '../../services/app_settings_service.dart';
 import '../../services/screen_time_service.dart';
@@ -23,12 +27,16 @@ class ParentSettingsScreen extends StatefulWidget {
 }
 
 class _ParentSettingsScreenState extends State<ParentSettingsScreen> {
+  static const String _feedbackStorageKey = 'parent_feedback_entries';
+  static const String _feedbackTargetEmail = 'matedevelopment98@gmail.com';
+
   final _oldPinController = TextEditingController();
   final _newPinController = TextEditingController();
   final _confirmPinController = TextEditingController();
 
   final _questionController = TextEditingController();
   final _answerController = TextEditingController();
+  final _feedbackController = TextEditingController();
 
   String? _pinErrorMessage;
   String? _pinSuccessMessage;
@@ -37,8 +45,9 @@ class _ParentSettingsScreenState extends State<ParentSettingsScreen> {
   int _routineReminderMinutes = 30;
   bool _notificationsEnabled = true;
   bool _popupAlertEnabled = true;
-  bool _alertSoundEnabled = true;
   bool _isLoadingSettings = true;
+
+  List _savedFeedbacks = [];
 
   @override
   void initState() {
@@ -51,19 +60,34 @@ class _ParentSettingsScreenState extends State<ParentSettingsScreen> {
 
   Future<void> _loadAllData() async {
     final data = await ParentalService.getSecurityQuestionAndAnswer();
-    final limit = await AppSettingsService.getScreenTimeLimit();
+    var limit = await AppSettingsService.getScreenTimeLimit();
     final reminder = await AppSettingsService.getRoutineReminderMinutes();
     final notif = await AppSettingsService.areNotificationsEnabled();
     final popup = await AppSettingsService.isTaskPopupAlertEnabled();
-    final sound = await AppSettingsService.isAlertSoundEnabled();
 
+    const validLimits = [0, 30, 45, 60, 90];
+    if (!validLimits.contains(limit)) {
+      limit = 60;
+      await AppSettingsService.setScreenTimeLimit(60);
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    final rawFeedbacks = prefs.getStringList(_feedbackStorageKey) ?? [];
+    final parsedFeedbacks = [];
+    for (final item in rawFeedbacks) {
+      try {
+        parsedFeedbacks.add(jsonDecode(item));
+      } catch (_) {}
+    }
+
+    if (!mounted) return;
     setState(() {
       _questionController.text = data['question']!;
       _screenTimeLimit = limit;
       _routineReminderMinutes = reminder;
       _notificationsEnabled = notif;
       _popupAlertEnabled = popup;
-      _alertSoundEnabled = sound;
+      _savedFeedbacks = parsedFeedbacks;
       _isLoadingSettings = false;
     });
   }
@@ -75,7 +99,94 @@ class _ParentSettingsScreenState extends State<ParentSettingsScreen> {
     _confirmPinController.dispose();
     _questionController.dispose();
     _answerController.dispose();
+    _feedbackController.dispose();
     super.dispose();
+  }
+
+  Future<void> _submitFeedbackViaEmail() async {
+    final text = _feedbackController.text.trim();
+    if (text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Írj be néhány sort a visszajelzés mezőbe!'),
+        ),
+      );
+      return;
+    }
+
+    final now = DateTime.now();
+    final formattedDate =
+        '${now.year}.${now.month.toString().padLeft(2, '0')}.${now.day.toString().padLeft(2, '0')}. '
+        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+
+    final entry = {'date': formattedDate, 'message': text};
+
+    final updatedList = [entry, ..._savedFeedbacks];
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(
+      _feedbackStorageKey,
+      updatedList.map((e) => jsonEncode(e)).toList(),
+    );
+
+    final emailSubject = 'Iránytű App - Szülői visszajelzés ($formattedDate)';
+    final emailBody =
+        'Küldés ideje: $formattedDate\n'
+        '----------------------------------------\n\n'
+        '$text\n';
+
+    await Clipboard.setData(
+      ClipboardData(
+        text:
+            'Címzett: $_feedbackTargetEmail\nTárgy: $emailSubject\n\n$emailBody',
+      ),
+    );
+
+    final Uri mailtoUri = Uri(
+      scheme: 'mailto',
+      path: _feedbackTargetEmail,
+      query:
+          'subject=${Uri.encodeComponent(emailSubject)}&body=${Uri.encodeComponent(emailBody)}',
+    );
+
+    bool emailOpened = false;
+    try {
+      emailOpened = await launchUrl(
+        mailtoUri,
+        mode: LaunchMode.externalApplication,
+      );
+    } catch (_) {
+      emailOpened = false;
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _savedFeedbacks = updatedList;
+      _feedbackController.clear();
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          emailOpened
+              ? 'Levelező megnyitva, a visszajelzés elmentve! ✉️✅'
+              : 'Visszajelzés elmentve és vágólapra másolva ($_feedbackTargetEmail)! 📋✅',
+        ),
+        backgroundColor: const Color(0xFF16A34A),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  Future<void> _deleteFeedback(int index) async {
+    final updatedList = List.from(_savedFeedbacks)..removeAt(index);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(
+      _feedbackStorageKey,
+      updatedList.map((e) => jsonEncode(e)).toList(),
+    );
+    setState(() {
+      _savedFeedbacks = updatedList;
+    });
   }
 
   Future<void> _changePin() async {
@@ -261,6 +372,46 @@ class _ParentSettingsScreenState extends State<ParentSettingsScreen> {
     );
   }
 
+  Widget _buildSwitchRow({
+    required String title,
+    required String subtitle,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+    required Color primaryTextColor,
+    required Color secondaryTextColor,
+  }) {
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                  color: primaryTextColor,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: TextStyle(fontSize: 12, color: secondaryTextColor),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        Switch.adaptive(
+          value: value,
+          activeTrackColor: const Color(0xFF2563EB),
+          onChanged: onChanged,
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -320,27 +471,14 @@ class _ParentSettingsScreenState extends State<ParentSettingsScreen> {
                                 ),
                               ),
                               const SizedBox(height: 12),
-                              SwitchListTile.adaptive(
-                                contentPadding: EdgeInsets.zero,
-                                title: Text(
-                                  'Szenzoros éjszakai mód',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14,
-                                    color: primaryTextColor,
-                                  ),
-                                ),
-                                subtitle: Text(
-                                  themeProv.isDarkMode
-                                      ? 'Bekapcsolva (lágy sötétkék háttér)'
-                                      : 'Kikapcsolva (nappali világos háttér)',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: secondaryTextColor,
-                                  ),
-                                ),
+                              _buildSwitchRow(
+                                title: 'Szenzoros éjszakai mód',
+                                subtitle: themeProv.isDarkMode
+                                    ? 'Bekapcsolva (lágy sötétkék háttér)'
+                                    : 'Kikapcsolva (nappali világos háttér)',
                                 value: themeProv.isDarkMode,
-                                activeColor: const Color(0xFF2563EB),
+                                primaryTextColor: primaryTextColor,
+                                secondaryTextColor: secondaryTextColor,
                                 onChanged: (val) {
                                   themeProv.toggleTheme(val);
                                 },
@@ -362,7 +500,7 @@ class _ParentSettingsScreenState extends State<ParentSettingsScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Szabályozd a felugró ablakokat, a hangjelzéseket és a rendszerértesítéseket.',
+                            'Szabályozd a felugró ablakokat és a rendszerértesítéseket.',
                             style: TextStyle(
                               fontSize: 13,
                               color: secondaryTextColor,
@@ -370,25 +508,13 @@ class _ParentSettingsScreenState extends State<ParentSettingsScreen> {
                           ),
                           const SizedBox(height: 16),
 
-                          SwitchListTile.adaptive(
-                            contentPadding: EdgeInsets.zero,
-                            title: Text(
-                              'Felugró ablak napirend közben',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                                color: primaryTextColor,
-                              ),
-                            ),
-                            subtitle: Text(
-                              'Ha elérkezik a feladat ideje, nagy kártya ugrik fel a gyermeknek.',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: secondaryTextColor,
-                              ),
-                            ),
+                          _buildSwitchRow(
+                            title: 'Felugró ablak napirend közben',
+                            subtitle:
+                                'Ha elérkezik a feladat ideje, nagy kártya ugrik fel a gyermeknek.',
                             value: _popupAlertEnabled,
-                            activeColor: const Color(0xFF2563EB),
+                            primaryTextColor: primaryTextColor,
+                            secondaryTextColor: secondaryTextColor,
                             onChanged: (val) async {
                               setState(() => _popupAlertEnabled = val);
                               await AppSettingsService.setTaskPopupAlertEnabled(
@@ -396,55 +522,15 @@ class _ParentSettingsScreenState extends State<ParentSettingsScreen> {
                               );
                             },
                           ),
-                          Divider(height: 16, color: cardBorderColor),
+                          Divider(height: 20, color: cardBorderColor),
 
-                          SwitchListTile.adaptive(
-                            contentPadding: EdgeInsets.zero,
-                            title: Text(
-                              'Hangjelzés / Felolvasás riasztáskor',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                                color: primaryTextColor,
-                              ),
-                            ),
-                            subtitle: Text(
-                              'A felugró ablak automatikusan lejátssza a felvett szülői hangot vagy TTS-t.',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: secondaryTextColor,
-                              ),
-                            ),
-                            value: _alertSoundEnabled,
-                            activeColor: const Color(0xFF2563EB),
-                            onChanged: (val) async {
-                              setState(() => _alertSoundEnabled = val);
-                              await AppSettingsService.setAlertSoundEnabled(
-                                val,
-                              );
-                            },
-                          ),
-                          Divider(height: 16, color: cardBorderColor),
-
-                          SwitchListTile.adaptive(
-                            contentPadding: EdgeInsets.zero,
-                            title: Text(
-                              'Háttérbeli rendszerértesítések',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                                color: primaryTextColor,
-                              ),
-                            ),
-                            subtitle: Text(
-                              'Értesítés az értesítési sávban, ha az app le van zárva vagy a háttérben fut.',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: secondaryTextColor,
-                              ),
-                            ),
+                          _buildSwitchRow(
+                            title: 'Háttérbeli rendszerértesítések',
+                            subtitle:
+                                'Értesítés az értesítési sávban, ha az app le van zárva vagy a háttérben fut.',
                             value: _notificationsEnabled,
-                            activeColor: const Color(0xFF2563EB),
+                            primaryTextColor: primaryTextColor,
+                            secondaryTextColor: secondaryTextColor,
                             onChanged: (val) async {
                               setState(() => _notificationsEnabled = val);
                               await AppSettingsService.setNotificationsEnabled(
@@ -459,7 +545,6 @@ class _ParentSettingsScreenState extends State<ParentSettingsScreen> {
                           ),
                           Divider(height: 24, color: cardBorderColor),
 
-                          // Képernyőidő korlát dropdown
                           DropdownButtonFormField<int>(
                             value: _screenTimeLimit,
                             isExpanded: true,
@@ -490,13 +575,6 @@ class _ParentSettingsScreenState extends State<ParentSettingsScreen> {
                                 value: 0,
                                 child: Text(
                                   'Kikapcsolva',
-                                  style: TextStyle(color: primaryTextColor),
-                                ),
-                              ),
-                              DropdownMenuItem(
-                                value: 1,
-                                child: Text(
-                                  '1 perc (Teszteléshez ⚡)',
                                   style: TextStyle(color: primaryTextColor),
                                 ),
                               ),
@@ -545,7 +623,6 @@ class _ParentSettingsScreenState extends State<ParentSettingsScreen> {
                           ),
                           const SizedBox(height: 16),
 
-                          // Közelgő feladat dropdown
                           DropdownButtonFormField<int>(
                             value: _routineReminderMinutes,
                             isExpanded: true,
@@ -662,38 +739,49 @@ class _ParentSettingsScreenState extends State<ParentSettingsScreen> {
                                 physics: const NeverScrollableScrollPhysics(),
                                 itemCount: rewardProv.rewards.length,
                                 separatorBuilder: (_, __) =>
-                                    Divider(height: 12, color: cardBorderColor),
+                                    Divider(height: 16, color: cardBorderColor),
                                 itemBuilder: (context, index) {
                                   final reward = rewardProv.rewards[index];
-                                  return ListTile(
-                                    contentPadding: EdgeInsets.zero,
-                                    leading: _buildRewardLeading(reward),
-                                    title: Text(
-                                      reward.title,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 15,
-                                        color: primaryTextColor,
+                                  return Row(
+                                    children: [
+                                      _buildRewardLeading(reward),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              reward.title,
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 15,
+                                                color: primaryTextColor,
+                                              ),
+                                            ),
+                                            Text(
+                                              '${reward.pointsCost} csillag ⭐',
+                                              style: const TextStyle(
+                                                color: Color(0xFFD97706),
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 13,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                    subtitle: Text(
-                                      '${reward.pointsCost} csillag ⭐',
-                                      style: const TextStyle(
-                                        color: Color(0xFFD97706),
-                                        fontWeight: FontWeight.bold,
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.delete_outline_rounded,
+                                          color: Color(0xFFEF4444),
+                                        ),
+                                        onPressed: () {
+                                          if (reward.id != null) {
+                                            rewardProv.deleteReward(reward.id!);
+                                          }
+                                        },
                                       ),
-                                    ),
-                                    trailing: IconButton(
-                                      icon: const Icon(
-                                        Icons.delete_outline_rounded,
-                                        color: Color(0xFFEF4444),
-                                      ),
-                                      onPressed: () {
-                                        if (reward.id != null) {
-                                          rewardProv.deleteReward(reward.id!);
-                                        }
-                                      },
-                                    ),
+                                    ],
                                   );
                                 },
                               );
@@ -777,7 +865,7 @@ class _ParentSettingsScreenState extends State<ParentSettingsScreen> {
                           ),
                           const SizedBox(height: 14),
                           Divider(height: 1, color: cardBorderColor),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 12),
 
                           Consumer<CustomTaskProvider>(
                             builder: (context, customProv, child) {
@@ -805,111 +893,124 @@ class _ParentSettingsScreenState extends State<ParentSettingsScreen> {
                                 physics: const NeverScrollableScrollPhysics(),
                                 itemCount: tasks.length,
                                 separatorBuilder: (_, __) =>
-                                    Divider(height: 1, color: cardBorderColor),
+                                    Divider(height: 16, color: cardBorderColor),
                                 itemBuilder: (context, index) {
                                   final task = tasks[index];
                                   final hasImage =
                                       task.imagePath != null &&
                                       File(task.imagePath!).existsSync();
 
-                                  return ListTile(
-                                    contentPadding: EdgeInsets.zero,
-                                    leading: ClipRRect(
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: hasImage
-                                          ? Image.file(
-                                              File(task.imagePath!),
-                                              width: 42,
-                                              height: 42,
-                                              fit: BoxFit.cover,
-                                            )
-                                          : Container(
-                                              width: 42,
-                                              height: 42,
-                                              color: isDark
-                                                  ? const Color(0xFF0F172A)
-                                                  : const Color(0xFFF1F5F9),
-                                              child: Icon(
-                                                Icons.image_outlined,
-                                                color: secondaryTextColor,
-                                                size: 20,
+                                  return Row(
+                                    children: [
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: hasImage
+                                            ? Image.file(
+                                                File(task.imagePath!),
+                                                width: 42,
+                                                height: 42,
+                                                fit: BoxFit.cover,
+                                              )
+                                            : Container(
+                                                width: 42,
+                                                height: 42,
+                                                color: isDark
+                                                    ? const Color(0xFF0F172A)
+                                                    : const Color(0xFFF1F5F9),
+                                                child: Icon(
+                                                  Icons.image_outlined,
+                                                  color: secondaryTextColor,
+                                                  size: 20,
+                                                ),
                                               ),
-                                            ),
-                                    ),
-                                    title: Text(
-                                      task.title,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
-                                        color: primaryTextColor,
                                       ),
-                                    ),
-                                    subtitle: Text(
-                                      task.category,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: secondaryTextColor,
-                                      ),
-                                    ),
-                                    trailing: IconButton(
-                                      icon: const Icon(
-                                        Icons.delete_outline_rounded,
-                                        color: Color(0xFFEF4444),
-                                        size: 22,
-                                      ),
-                                      tooltip: 'Kártya törlése',
-                                      onPressed: () {
-                                        showDialog(
-                                          context: context,
-                                          builder: (ctx) => AlertDialog(
-                                            backgroundColor: cardBgColor,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(16),
-                                            ),
-                                            title: Text(
-                                              'Kártya törlése',
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              task.title,
                                               style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14,
                                                 color: primaryTextColor,
                                               ),
                                             ),
-                                            content: Text(
-                                              'Biztosan törölni szeretnéd a(z) "${task.title}" kártyát?',
+                                            Text(
+                                              task.category,
                                               style: TextStyle(
+                                                fontSize: 12,
                                                 color: secondaryTextColor,
                                               ),
                                             ),
-                                            actions: [
-                                              TextButton(
-                                                onPressed: () =>
-                                                    Navigator.pop(ctx),
-                                                child: Text(
-                                                  'Mégse',
-                                                  style: TextStyle(
-                                                    color: secondaryTextColor,
-                                                  ),
+                                          ],
+                                        ),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.delete_outline_rounded,
+                                          color: Color(0xFFEF4444),
+                                          size: 22,
+                                        ),
+                                        tooltip: 'Kártya törlése',
+                                        onPressed: () {
+                                          showDialog(
+                                            context: context,
+                                            builder: (ctx) => AlertDialog(
+                                              backgroundColor: cardBgColor,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(16),
+                                              ),
+                                              title: Text(
+                                                'Kártya törlése',
+                                                style: TextStyle(
+                                                  color: primaryTextColor,
                                                 ),
                                               ),
-                                              ElevatedButton(
-                                                style: ElevatedButton.styleFrom(
-                                                  backgroundColor: const Color(
-                                                    0xFFEF4444,
-                                                  ),
-                                                  foregroundColor: Colors.white,
+                                              content: Text(
+                                                'Biztosan törölni szeretnéd a(z) "${task.title}" kártyát?',
+                                                style: TextStyle(
+                                                  color: secondaryTextColor,
                                                 ),
-                                                onPressed: () async {
-                                                  Navigator.pop(ctx);
-                                                  await customProv.deleteTask(
-                                                    task.id,
-                                                  );
-                                                },
-                                                child: const Text('Törlés'),
                                               ),
-                                            ],
-                                          ),
-                                        );
-                                      },
-                                    ),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () =>
+                                                      Navigator.pop(ctx),
+                                                  child: Text(
+                                                    'Mégse',
+                                                    style: TextStyle(
+                                                      color: secondaryTextColor,
+                                                    ),
+                                                  ),
+                                                ),
+                                                ElevatedButton(
+                                                  style:
+                                                      ElevatedButton.styleFrom(
+                                                        backgroundColor:
+                                                            const Color(
+                                                              0xFFEF4444,
+                                                            ),
+                                                        foregroundColor:
+                                                            Colors.white,
+                                                      ),
+                                                  onPressed: () async {
+                                                    Navigator.pop(ctx);
+                                                    await customProv.deleteTask(
+                                                      task.id,
+                                                    );
+                                                  },
+                                                  child: const Text('Törlés'),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ],
                                   );
                                 },
                               );
@@ -921,8 +1022,158 @@ class _ParentSettingsScreenState extends State<ParentSettingsScreen> {
 
                     const SizedBox(height: 24),
 
-                    // GYÁRI ALAPHELYZETBE ÁLLÍTÁS KÁRTYA (Overflow védve)
-                    Container(
+                    // E-MAIL ALAPÚ SZÜLŐI FEEDBACK / VISSZAJELZÉS KÁRTYA
+                    _buildCard(
+                      title: 'Szülői visszajelzés (E-mail)',
+                      icon: Icons.mail_outline_rounded,
+                      isDark: isDark,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Oszd meg tapasztalataidat, ötleteidet vagy hibajelentésedet közvetlenül e-mailben! A visszajelzést a készüléked levelezőjével küldheted el.',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: secondaryTextColor,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: _feedbackController,
+                            maxLines: 4,
+                            style: TextStyle(color: primaryTextColor),
+                            decoration: InputDecoration(
+                              hintText:
+                                  'Írd le az észrevételedet vagy javaslatodat...',
+                              hintStyle: TextStyle(
+                                fontSize: 13,
+                                color: secondaryTextColor.withValues(
+                                  alpha: 0.7,
+                                ),
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(color: cardBorderColor),
+                              ),
+                              contentPadding: const EdgeInsets.all(12),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: _submitFeedbackViaEmail,
+                              icon: const Icon(
+                                Icons.send_rounded,
+                                color: Colors.white,
+                                size: 18,
+                              ),
+                              label: const Text(
+                                'Küldés e-mailben',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF0D9488),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                          if (_savedFeedbacks.isNotEmpty) ...[
+                            const SizedBox(height: 16),
+                            Divider(height: 1, color: cardBorderColor),
+                            const SizedBox(height: 10),
+                            Text(
+                              'Korábbi üzenetek (${_savedFeedbacks.length}):',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: primaryTextColor,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            ListView.separated(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: _savedFeedbacks.length,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: 8),
+                              itemBuilder: (context, idx) {
+                                final fb = _savedFeedbacks[idx];
+                                return AnimatedContainer(
+                                  duration: const Duration(milliseconds: 280),
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: isDark
+                                        ? const Color(0xFF0F172A)
+                                        : const Color(0xFFF8FAFC),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: cardBorderColor),
+                                  ),
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              '${fb['date']}',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                                color: secondaryTextColor,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              '${fb['message']}',
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                color: primaryTextColor,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      IconButton(
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                        icon: const Icon(
+                                          Icons.delete_outline_rounded,
+                                          size: 18,
+                                          color: Color(0xFFEF4444),
+                                        ),
+                                        onPressed: () => _deleteFeedback(idx),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // GYÁRI ALAPHELYZETBE ÁLLÍTÁS KÁRTYA
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 280),
+                      curve: Curves.easeInOut,
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: cardBgColor,
@@ -989,14 +1240,12 @@ class _ParentSettingsScreenState extends State<ParentSettingsScreen> {
                                 Icons.restart_alt_rounded,
                                 color: Color(0xFFE11D48),
                               ),
-                              label: const Flexible(
-                                child: Text(
-                                  'Gyári alapértékek visszaállítása',
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    color: Color(0xFFE11D48),
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                              label: const Text(
+                                'Gyári alapértékek visszaállítása',
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: Color(0xFFE11D48),
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
                               style: OutlinedButton.styleFrom(
@@ -1259,7 +1508,9 @@ class _ParentSettingsScreenState extends State<ParentSettingsScreen> {
         ? const Color(0xFFF8FAFC)
         : const Color(0xFF1E293B);
 
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeInOut,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: cardBgColor,

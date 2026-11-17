@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../data/models/daily_schedule_model.dart';
 import '../../providers/routine_provider.dart';
 import '../../services/audio_service.dart';
 import '../screens/task_detail_screen.dart';
@@ -85,7 +86,7 @@ class TaskCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isCompleted = item.schedule.status == 'COMPLETED';
+    final isCompleted = item.schedule.status == TaskStatus.completed;
 
     final cardBgColor = isCompleted
         ? (isDark
