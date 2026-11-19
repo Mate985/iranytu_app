@@ -113,7 +113,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
 
   List<_MemoryPairItem> _customPairs = [];
   List<_MemoryBoardCard> _boardCards = [];
-  int _pairCount = 2; // 2 -> 2x2, 4 -> 3x3, 6 -> 3x4
+  int _pairCount = 2; // 2 -> 2x2, 4 -> 3x3, 6 -> 3x4, 8 -> 4x4
   int _moves = 0;
   int _matchedPairs = 0;
   bool _isChecking = false;
@@ -156,6 +156,12 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
     );
   }
 
+  int get _columnsForMode {
+    if (_pairCount == 2) return 2;
+    if (_pairCount == 8) return 4;
+    return 3;
+  }
+
   void _startNewRound() {
     final random = Random();
     final selectedItems = <_MemoryPairItem>[];
@@ -184,7 +190,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
       deck.add(_MemoryBoardCard(instanceId: idCounter++, item: item));
     }
 
-    final cols = _pairCount == 2 ? 2 : 3;
+    final cols = _columnsForMode;
     _shuffleWithoutAdjacentPairs(deck, cols, random);
 
     setState(() {
@@ -779,6 +785,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
     final item = card.item;
     final hasCustomPhoto =
         item.imagePath != null && File(item.imagePath!).existsSync();
+    final isFourByFour = _pairCount == 8;
 
     return Container(
       decoration: BoxDecoration(
@@ -787,12 +794,12 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
                   ? const Color(0xFF065F46).withValues(alpha: 0.5)
                   : const Color(0xFFDCFCE7))
             : (isDark ? const Color(0xFF1E293B) : Colors.white),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(isFourByFour ? 12 : 16),
         border: Border.all(
           color: card.isMatched
               ? const Color(0xFF16A34A)
               : const Color(0xFF38BDF8),
-          width: 2.5,
+          width: isFourByFour ? 2 : 2.5,
         ),
         boxShadow: [
           BoxShadow(
@@ -802,7 +809,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
           ),
         ],
       ),
-      padding: const EdgeInsets.all(6),
+      padding: EdgeInsets.all(isFourByFour ? 4 : 6),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -812,7 +819,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
               child: Center(
                 child: hasCustomPhoto
                     ? ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(8),
                         child: Image.file(
                           File(item.imagePath!),
                           fit: BoxFit.contain,
@@ -824,7 +831,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
                         fit: BoxFit.scaleDown,
                         child: Text(
                           item.emoji,
-                          style: const TextStyle(fontSize: 38),
+                          style: TextStyle(fontSize: isFourByFour ? 30 : 38),
                         ),
                       ),
               ),
@@ -837,7 +844,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: isFourByFour ? 10.5 : 12,
               fontWeight: FontWeight.bold,
               color: isDark ? const Color(0xFFF8FAFC) : const Color(0xFF1E293B),
             ),
@@ -848,6 +855,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
   }
 
   Widget _buildCardBack(bool isDark) {
+    final isFourByFour = _pairCount == 8;
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -857,7 +865,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(isFourByFour ? 12 : 16),
         border: Border.all(
           color: Colors.white.withValues(alpha: 0.6),
           width: 2,
@@ -870,8 +878,12 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
           ),
         ],
       ),
-      child: const Center(
-        child: Icon(Icons.question_mark_rounded, color: Colors.white, size: 30),
+      child: Center(
+        child: Icon(
+          Icons.question_mark_rounded,
+          color: Colors.white,
+          size: isFourByFour ? 24 : 30,
+        ),
       ),
     );
   }
@@ -900,7 +912,8 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isTwoByTwo = _pairCount == 2;
     final isThreeByThree = _pairCount == 4;
-    final crossAxisCount = isTwoByTwo ? 2 : 3;
+    final isFourByFour = _pairCount == 8;
+    final crossAxisCount = _columnsForMode;
     final rowCount = isTwoByTwo ? 2 : (isThreeByThree ? 3 : 4);
     final gridItemCount = isThreeByThree ? 9 : _boardCards.length;
 
@@ -961,7 +974,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
       body: SafeArea(
         bottom: true,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 8, 14, 14),
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 14),
           child: Column(
             children: [
               Row(
@@ -978,30 +991,28 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
                           value: 2,
                           label: FittedBox(
                             fit: BoxFit.scaleDown,
-                            child: Text(
-                              '2×2',
-                              style: TextStyle(fontSize: 12.5),
-                            ),
+                            child: Text('2×2', style: TextStyle(fontSize: 12)),
                           ),
                         ),
                         ButtonSegment(
                           value: 4,
                           label: FittedBox(
                             fit: BoxFit.scaleDown,
-                            child: Text(
-                              '3×3',
-                              style: TextStyle(fontSize: 12.5),
-                            ),
+                            child: Text('3×3', style: TextStyle(fontSize: 12)),
                           ),
                         ),
                         ButtonSegment(
                           value: 6,
                           label: FittedBox(
                             fit: BoxFit.scaleDown,
-                            child: Text(
-                              '3×4',
-                              style: TextStyle(fontSize: 12.5),
-                            ),
+                            child: Text('3×4', style: TextStyle(fontSize: 12)),
+                          ),
+                        ),
+                        ButtonSegment(
+                          value: 8,
+                          label: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text('4×4', style: TextStyle(fontSize: 12)),
                           ),
                         ),
                       ],
@@ -1014,10 +1025,10 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
                       },
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
+                      horizontal: 9,
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
@@ -1029,7 +1040,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
                     child: Text(
                       '$_matchedPairs / $_pairCount pár',
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 12.5,
                         fontWeight: FontWeight.bold,
                         color: isDark
                             ? const Color(0xFF38BDF8)
@@ -1043,7 +1054,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
               Expanded(
                 child: LayoutBuilder(
                   builder: (context, constraints) {
-                    const spacing = 10.0;
+                    final spacing = isFourByFour ? 8.0 : 10.0;
                     final availableWidth =
                         constraints.maxWidth - (crossAxisCount - 1) * spacing;
                     final availableHeight =

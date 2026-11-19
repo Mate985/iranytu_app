@@ -30,6 +30,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
 
   final List<TextEditingController> _stepControllers = [];
   final List<String?> _stepAudioPaths = [];
+  final List<String?> _stepImagePaths = [];
   int? _recordingStepIndex;
 
   final ImagePicker _picker = ImagePicker();
@@ -52,6 +53,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     setState(() {
       _stepControllers.add(TextEditingController());
       _stepAudioPaths.add(null);
+      _stepImagePaths.add(null);
     });
   }
 
@@ -68,6 +70,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
         _stepControllers[index].dispose();
         _stepControllers.removeAt(index);
         _stepAudioPaths.removeAt(index);
+        _stepImagePaths.removeAt(index);
       });
     }
   }
@@ -95,6 +98,22 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
       if (image != null) {
         setState(() {
           _pickedImagePath = image.path;
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _pickStepImage(int index, ImageSource source) async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: source,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
+      if (image != null) {
+        setState(() {
+          _stepImagePaths[index] = image.path;
         });
       }
     } catch (_) {}
@@ -215,6 +234,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
       iconPath: visualPath,
       stepDescriptions: descriptions,
       stepAudioPaths: _stepAudioPaths,
+      stepIconPaths: _stepImagePaths,
     );
 
     if (mounted) {
@@ -372,7 +392,6 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
               ),
               const SizedBox(height: 20),
 
-              // Saját fotó / Kép feltöltése a feladathoz
               Text(
                 'Saját kép / fotó (opcionális):',
                 style: TextStyle(
@@ -395,7 +414,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                             File(_pickedImagePath!),
                             width: 64,
                             height: 64,
-                            fit: BoxFit.cover,
+                            fit: BoxFit.contain,
                           ),
                         ),
                         Positioned(
@@ -607,81 +626,196 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                     stepAudio != null &&
                     stepAudio.isNotEmpty &&
                     File(stepAudio).existsSync();
+                final stepImage = _stepImagePaths[idx];
+                final hasStepImage =
+                    stepImage != null &&
+                    stepImage.isNotEmpty &&
+                    File(stepImage).existsSync();
                 final isStepRec = _recordingStepIndex == idx;
 
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: Row(
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? const Color(0xFF1E293B).withValues(alpha: 0.6)
+                        : const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isDark
+                          ? const Color(0xFF334155)
+                          : const Color(0xFFE2E8F0),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      CircleAvatar(
-                        radius: 13,
-                        backgroundColor: const Color(0xFFE2E8F0),
-                        foregroundColor: const Color(0xFF475569),
-                        child: Text(
-                          '${idx + 1}',
-                          style: const TextStyle(fontSize: 11),
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: TextFormField(
-                          controller: controller,
-                          decoration: InputDecoration(
-                            hintText: '${idx + 1}. lépés',
-                            isDense: true,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 13,
+                            backgroundColor: const Color(0xFFE2E8F0),
+                            foregroundColor: const Color(0xFF475569),
+                            child: Text(
+                              '${idx + 1}',
+                              style: const TextStyle(fontSize: 11),
                             ),
                           ),
-                        ),
-                      ),
-                      if (hasStepAudio && !isStepRec) ...[
-                        const SizedBox(width: 2),
-                        IconButton(
-                          padding: const EdgeInsets.all(4),
-                          constraints: const BoxConstraints(),
-                          icon: const Icon(
-                            Icons.play_circle_fill_rounded,
-                            color: Color(0xFF16A34A),
-                            size: 22,
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: TextFormField(
+                              controller: controller,
+                              decoration: InputDecoration(
+                                hintText: '${idx + 1}. lépés',
+                                isDense: true,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                            ),
                           ),
-                          tooltip: 'Meghallgatás',
-                          onPressed: () => _playAudioFile(stepAudio),
-                        ),
-                      ],
-                      const SizedBox(width: 2),
-                      IconButton(
-                        padding: const EdgeInsets.all(4),
-                        constraints: const BoxConstraints(),
-                        icon: Icon(
-                          isStepRec
-                              ? Icons.stop_circle_rounded
-                              : (hasStepAudio
-                                    ? Icons.mic_rounded
-                                    : Icons.mic_none_rounded),
-                          color: isStepRec
-                              ? const Color(0xFFEF4444)
-                              : (hasStepAudio
-                                    ? const Color(0xFF2563EB)
-                                    : const Color(0xFF64748B)),
-                          size: 22,
-                        ),
-                        tooltip: isStepRec ? 'Leállítás' : 'Hang felvétele',
-                        onPressed: () => _toggleStepRecording(idx),
-                      ),
-                      if (_stepControllers.length > 1) ...[
-                        const SizedBox(width: 2),
-                        IconButton(
-                          padding: const EdgeInsets.all(4),
-                          constraints: const BoxConstraints(),
-                          icon: const Icon(
-                            Icons.close_rounded,
-                            color: Colors.redAccent,
-                            size: 20,
+                          if (hasStepAudio && !isStepRec) ...[
+                            const SizedBox(width: 2),
+                            IconButton(
+                              padding: const EdgeInsets.all(4),
+                              constraints: const BoxConstraints(),
+                              icon: const Icon(
+                                Icons.play_circle_fill_rounded,
+                                color: Color(0xFF16A34A),
+                                size: 22,
+                              ),
+                              tooltip: 'Meghallgatás',
+                              onPressed: () => _playAudioFile(stepAudio),
+                            ),
+                          ],
+                          const SizedBox(width: 2),
+                          IconButton(
+                            padding: const EdgeInsets.all(4),
+                            constraints: const BoxConstraints(),
+                            icon: Icon(
+                              isStepRec
+                                  ? Icons.stop_circle_rounded
+                                  : (hasStepAudio
+                                        ? Icons.mic_rounded
+                                        : Icons.mic_none_rounded),
+                              color: isStepRec
+                                  ? const Color(0xFFEF4444)
+                                  : (hasStepAudio
+                                        ? const Color(0xFF2563EB)
+                                        : const Color(0xFF64748B)),
+                              size: 22,
+                            ),
+                            tooltip: isStepRec ? 'Leállítás' : 'Hang felvétele',
+                            onPressed: () => _toggleStepRecording(idx),
                           ),
-                          onPressed: () => _removeStepField(idx),
-                        ),
-                      ],
+                          if (_stepControllers.length > 1) ...[
+                            const SizedBox(width: 2),
+                            IconButton(
+                              padding: const EdgeInsets.all(4),
+                              constraints: const BoxConstraints(),
+                              icon: const Icon(
+                                Icons.close_rounded,
+                                color: Colors.redAccent,
+                                size: 20,
+                              ),
+                              onPressed: () => _removeStepField(idx),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          if (hasStepImage) ...[
+                            Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.file(
+                                    File(stepImage),
+                                    width: 52,
+                                    height: 52,
+                                    fit: BoxFit.contain,
+                                  ),
+                                ),
+                                Positioned(
+                                  top: -5,
+                                  right: -5,
+                                  child: GestureDetector(
+                                    onTap: () => setState(
+                                      () => _stepImagePaths[idx] = null,
+                                    ),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(2),
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFFEF4444),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.close_rounded,
+                                        size: 12,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(width: 10),
+                          ],
+                          Expanded(
+                            child: Wrap(
+                              spacing: 6,
+                              runSpacing: 4,
+                              children: [
+                                OutlinedButton.icon(
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 6,
+                                    ),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                  icon: const Icon(
+                                    Icons.photo_library_rounded,
+                                    size: 15,
+                                  ),
+                                  label: const Text(
+                                    'Kép galériából',
+                                    style: TextStyle(fontSize: 12),
+                                  ),
+                                  onPressed: () =>
+                                      _pickStepImage(idx, ImageSource.gallery),
+                                ),
+                                OutlinedButton.icon(
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 6,
+                                    ),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                  icon: const Icon(
+                                    Icons.camera_alt_rounded,
+                                    size: 15,
+                                  ),
+                                  label: const Text(
+                                    'Fotó kamerával',
+                                    style: TextStyle(fontSize: 12),
+                                  ),
+                                  onPressed: () =>
+                                      _pickStepImage(idx, ImageSource.camera),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 );

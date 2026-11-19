@@ -85,46 +85,60 @@ class TaskCard extends StatelessWidget {
   Widget _buildLeadingVisual(bool isCompleted, bool isDark) {
     if (isCompleted) {
       return const CircleAvatar(
-        radius: 22,
+        radius: 24,
         backgroundColor: Color(0xFF81C784),
-        child: Icon(Icons.check_rounded, color: Colors.white, size: 24),
+        child: Icon(Icons.check_rounded, color: Colors.white, size: 26),
       );
     }
 
     final fallbackIcon = CircleAvatar(
-      radius: 22,
+      radius: 24,
       backgroundColor: const Color(
         0xFF81C784,
       ).withValues(alpha: isDark ? 0.25 : 0.15),
       child: Icon(
         AppIcons.getIcon(item.task.iconPath),
         color: isDark ? const Color(0xFF81C784) : const Color(0xFF2E7D32),
-        size: 24,
+        size: 26,
       ),
     );
 
     final path = item.task.iconPath?.trim() ?? '';
+    Widget? imgWidget;
+
     if (path.startsWith('assets/')) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Image.asset(
-          path,
-          width: 46,
-          height: 46,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => fallbackIcon,
-        ),
+      imgWidget = Image.asset(
+        path,
+        fit: BoxFit.contain,
+        cacheWidth: 180,
+        errorBuilder: (_, __, ___) => fallbackIcon,
+      );
+    } else if (path.isNotEmpty && File(path).existsSync()) {
+      imgWidget = Image.file(
+        File(path),
+        fit: BoxFit.contain,
+        cacheWidth: 180,
+        errorBuilder: (_, __, ___) => fallbackIcon,
       );
     }
-    if (path.isNotEmpty && File(path).existsSync()) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Image.file(
-          File(path),
-          width: 46,
-          height: 46,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => fallbackIcon,
+
+    if (imgWidget != null) {
+      return RepaintBoundary(
+        child: Container(
+          width: 62,
+          height: 62,
+          padding: const EdgeInsets.all(3),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isDark ? const Color(0xFF475569) : const Color(0xFFE2E8F0),
+            ),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(9),
+            child: imgWidget,
+          ),
         ),
       );
     }
@@ -155,141 +169,144 @@ class TaskCard extends StatelessWidget {
         ? const Color(0xFF94A3B8)
         : (isDark ? const Color(0xFF60A5FA) : const Color(0xFF2563EB));
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      decoration: BoxDecoration(
-        color: cardBgColor,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: borderColor, width: 1.2),
-        boxShadow: isCompleted
-            ? []
-            : [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.03),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(18),
-        child: InkWell(
+    return RepaintBoundary(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: cardBgColor,
           borderRadius: BorderRadius.circular(18),
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => TaskDetailScreen(item: item),
-              ),
-            );
-          },
-          onLongPress: () => _deleteTask(context),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            child: Row(
-              children: [
-                _buildLeadingVisual(isCompleted, isDark),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        item.task.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        softWrap: true,
-                        style: TextStyle(
-                          fontSize: 15.5,
-                          fontWeight: FontWeight.bold,
-                          height: 1.25,
-                          color: titleColor,
-                          decoration: isCompleted
-                              ? TextDecoration.lineThrough
-                              : null,
+          border: Border.all(color: borderColor, width: 1.2),
+          boxShadow: isCompleted
+              ? []
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.03),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(18),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(18),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => TaskDetailScreen(item: item),
+                ),
+              );
+            },
+            onLongPress: () => _deleteTask(context),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Row(
+                children: [
+                  _buildLeadingVisual(isCompleted, isDark),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          item.task.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          softWrap: true,
+                          style: TextStyle(
+                            fontSize: 15.5,
+                            fontWeight: FontWeight.bold,
+                            height: 1.25,
+                            color: titleColor,
+                            decoration: isCompleted
+                                ? TextDecoration.lineThrough
+                                : null,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      InkWell(
-                        onTap: () => _selectTime(context),
-                        borderRadius: BorderRadius.circular(6),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.access_time_rounded,
-                              size: 14,
-                              color: timeColor,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              item.schedule.scheduledTime ?? 'Időpont',
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w600,
+                        const SizedBox(height: 4),
+                        InkWell(
+                          onTap: () => _selectTime(context),
+                          borderRadius: BorderRadius.circular(6),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.access_time_rounded,
+                                size: 14,
                                 color: timeColor,
                               ),
-                            ),
-                            const SizedBox(width: 4),
-                            Icon(
-                              Icons.edit_rounded,
-                              size: 12,
-                              color: timeColor.withValues(alpha: 0.7),
-                            ),
-                          ],
+                              const SizedBox(width: 4),
+                              Text(
+                                item.schedule.scheduledTime ?? 'Időpont',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: timeColor,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Icon(
+                                Icons.edit_rounded,
+                                size: 12,
+                                color: timeColor.withValues(alpha: 0.7),
+                              ),
+                            ],
+                          ),
                         ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        padding: const EdgeInsets.all(6),
+                        constraints: const BoxConstraints(),
+                        icon: Icon(
+                          Icons.volume_up_rounded,
+                          color: isDark
+                              ? const Color(0xFF60A5FA)
+                              : const Color(0xFF2563EB),
+                          size: 24,
+                        ),
+                        tooltip: 'Felolvasás',
+                        onPressed: () {
+                          final textToSpeak =
+                              item.task.ttsText.trim().isNotEmpty
+                              ? item.task.ttsText
+                              : item.task.title;
+
+                          AudioService.instance.speakOrPlay(
+                            text: textToSpeak,
+                            audioPath: item.task.audioPath,
+                          );
+                        },
+                      ),
+                      const SizedBox(width: 4),
+                      IconButton(
+                        padding: const EdgeInsets.all(6),
+                        constraints: const BoxConstraints(),
+                        icon: Icon(
+                          isCompleted
+                              ? Icons.check_circle_rounded
+                              : Icons.radio_button_unchecked_rounded,
+                          color: isCompleted
+                              ? const Color(0xFF16A34A)
+                              : (isDark
+                                    ? const Color(0xFF64748B)
+                                    : const Color(0xFF94A3B8)),
+                          size: 28,
+                        ),
+                        onPressed: onToggle,
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(width: 8),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      padding: const EdgeInsets.all(6),
-                      constraints: const BoxConstraints(),
-                      icon: Icon(
-                        Icons.volume_up_rounded,
-                        color: isDark
-                            ? const Color(0xFF60A5FA)
-                            : const Color(0xFF2563EB),
-                        size: 24,
-                      ),
-                      tooltip: 'Felolvasás',
-                      onPressed: () {
-                        final textToSpeak = item.task.ttsText.trim().isNotEmpty
-                            ? item.task.ttsText
-                            : item.task.title;
-
-                        AudioService.instance.speakOrPlay(
-                          text: textToSpeak,
-                          audioPath: item.task.audioPath,
-                        );
-                      },
-                    ),
-                    const SizedBox(width: 4),
-                    IconButton(
-                      padding: const EdgeInsets.all(6),
-                      constraints: const BoxConstraints(),
-                      icon: Icon(
-                        isCompleted
-                            ? Icons.check_circle_rounded
-                            : Icons.radio_button_unchecked_rounded,
-                        color: isCompleted
-                            ? const Color(0xFF16A34A)
-                            : (isDark
-                                  ? const Color(0xFF64748B)
-                                  : const Color(0xFF94A3B8)),
-                        size: 28,
-                      ),
-                      onPressed: onToggle,
-                    ),
-                  ],
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

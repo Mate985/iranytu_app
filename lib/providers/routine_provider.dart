@@ -116,6 +116,7 @@ class RoutineProvider extends ChangeNotifier {
     required String colorCode,
     required List<String> stepDescriptions,
     List<String?>? stepAudioPaths,
+    List<String?>? stepIconPaths,
     String iconPath = 'brush',
     int? targetDay,
   }) async {
@@ -134,7 +135,7 @@ class RoutineProvider extends ChangeNotifier {
       ),
     );
 
-    // 2. Mikrolépések mentése (saját hangfelvételekkel együtt)
+    // 2. Mikrolépések mentése (saját hangfelvételekkel és opcionális képekkel együtt)
     int savedOrder = 1;
     for (int i = 0; i < stepDescriptions.length; i++) {
       final desc = stepDescriptions[i].trim();
@@ -142,12 +143,20 @@ class RoutineProvider extends ChangeNotifier {
         final stepAudio = (stepAudioPaths != null && i < stepAudioPaths.length)
             ? stepAudioPaths[i]
             : null;
+        final customStepIcon =
+            (stepIconPaths != null &&
+                i < stepIconPaths.length &&
+                stepIconPaths[i] != null &&
+                stepIconPaths[i]!.trim().isNotEmpty)
+            ? stepIconPaths[i]!.trim()
+            : iconPath;
+
         await _dbHelper.insertSubtask(
           SubtaskModel(
             taskId: taskId,
             stepOrder: savedOrder,
             description: desc,
-            iconPath: iconPath,
+            iconPath: customStepIcon,
             audioPath: stepAudio,
           ),
         );

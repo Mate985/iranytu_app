@@ -37,26 +37,25 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ThemeProvider>(
-      builder: (context, themeProv, child) {
-        return MaterialApp(
-          debugShowCheckedModeBanner: false,
-          title: 'Iránytű',
-          themeMode: themeProv.themeMode,
-          theme: ThemeProvider.lightTheme,
-          darkTheme: ThemeProvider.darkTheme,
-          themeAnimationDuration: const Duration(milliseconds: 320),
-          themeAnimationCurve: Curves.easeInOutCubic,
-          home: Consumer<SessionTimerProvider>(
-            builder: (context, timerProv, child) {
-              if (timerProv.isTimeUp) {
-                return const SessionTimeoutScreen();
-              }
-              return const SplashScreen();
-            },
-          ),
-        );
-      },
+    final themeMode = context.select<ThemeProvider, ThemeMode>(
+      (p) => p.themeMode,
+    );
+
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Iránytű',
+      themeMode: themeMode,
+      theme: ThemeProvider.lightTheme,
+      darkTheme: ThemeProvider.darkTheme,
+      themeAnimationDuration: Duration.zero,
+      home: Consumer<SessionTimerProvider>(
+        builder: (context, timerProv, child) {
+          if (timerProv.isTimeUp) {
+            return const SessionTimeoutScreen();
+          }
+          return const SplashScreen();
+        },
+      ),
     );
   }
 }

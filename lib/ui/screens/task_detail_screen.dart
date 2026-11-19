@@ -165,7 +165,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     return Container(
       width: double.infinity,
       height: height,
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -186,7 +186,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         ? (_remainingSeconds / _totalSeconds)
         : 0.0;
 
-    final heroImage = _buildBigImageBox(task.iconPath, height: 190);
+    final heroImage = _buildBigImageBox(task.iconPath, height: 210);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -205,7 +205,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Instrukciós szöveg + hangszóró
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(
@@ -248,7 +247,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                     ),
                   ),
 
-                  // Nagy fő kép az időzítő felett
                   if (heroImage != null) ...[
                     const SizedBox(height: 14),
                     heroImage,
@@ -256,7 +254,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
                   const SizedBox(height: 20),
 
-                  // Időzítő
                   Stack(
                     alignment: Alignment.center,
                     children: [
@@ -396,8 +393,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                               subtask.id,
                             );
 
-                            // Ha a mikrolépésnek van saját képe, azt mutatja;
-                            // ha szülői feladatnál nincs külön lépéskép, örökli a fő képet.
                             final stepImgPath =
                                 (subtask.iconPath != null &&
                                     subtask.iconPath!.trim().isNotEmpty)
@@ -406,12 +401,12 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
                             final stepImage = _buildBigImageBox(
                               stepImgPath,
-                              height: 165,
+                              height: 235,
                             );
 
                             return Card(
                               elevation: 0,
-                              margin: const EdgeInsets.symmetric(vertical: 7),
+                              margin: const EdgeInsets.symmetric(vertical: 8),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(16),
                                 side: BorderSide(
@@ -523,7 +518,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                                       ],
                                     ),
                                     if (stepImage != null) ...[
-                                      const SizedBox(height: 10),
+                                      const SizedBox(height: 12),
                                       stepImage,
                                     ],
                                   ],

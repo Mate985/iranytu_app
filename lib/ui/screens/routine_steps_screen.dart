@@ -196,7 +196,7 @@ class _RoutineStepsScreenState extends State<RoutineStepsScreen> {
                       context,
                     ).copyWith(dividerColor: Colors.transparent),
                     child: ExpansionTile(
-                      initiallyExpanded: index == 0,
+                      initiallyExpanded: false,
                       tilePadding: const EdgeInsets.symmetric(
                         horizontal: 14,
                         vertical: 10,
