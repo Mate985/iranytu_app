@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../data/database/database_helper.dart';
 import '../../data/models/subtask_model.dart';
@@ -21,7 +22,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   bool _isLoading = true;
   final Set<int> _completedStepIds = {};
 
-  // Időzítő állapotváltozók
   Timer? _timer;
   late int _totalSeconds;
   late int _remainingSeconds;
@@ -44,21 +44,17 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
   Future<void> _playTaskAudio() async {
     final task = widget.item.task;
-    if (task.audioPath != null && task.audioPath!.isNotEmpty) {
-      await AudioService.instance.speakOrPlay(
-        text: task.ttsText.isNotEmpty ? task.ttsText : task.title,
-        audioPath: task.audioPath,
-      );
-    }
+    await AudioService.instance.speakOrPlay(
+      text: task.ttsText.isNotEmpty ? task.ttsText : task.title,
+      audioPath: task.audioPath,
+    );
   }
 
   Future<void> _playStepAudio(SubtaskModel subtask) async {
-    if (subtask.audioPath != null && subtask.audioPath!.isNotEmpty) {
-      await AudioService.instance.speakOrPlay(
-        text: subtask.description,
-        audioPath: subtask.audioPath,
-      );
-    }
+    await AudioService.instance.speakOrPlay(
+      text: subtask.description,
+      audioPath: subtask.audioPath,
+    );
   }
 
   @override
@@ -121,7 +117,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Ügyes vagy! 🎉'),
-        content: const Text('Lejárt a feladatra szánt idő!'),
+        content: const Text('Lejárt az idő!'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -141,28 +137,75 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     return '${minutes.toString().padLeft(2, '0')}:${remainingSecs.toString().padLeft(2, '0')}';
   }
 
+  Widget? _buildBigImageBox(String? rawPath, {required double height}) {
+    final path = rawPath?.trim() ?? '';
+    if (path.isEmpty) return null;
+
+    Widget? imageWidget;
+    if (path.startsWith('assets/')) {
+      imageWidget = Image.asset(
+        path,
+        width: double.infinity,
+        height: height,
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+      );
+    } else if (File(path).existsSync()) {
+      imageWidget = Image.file(
+        File(path),
+        width: double.infinity,
+        height: height,
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+      );
+    }
+
+    if (imageWidget == null) return null;
+
+    return Container(
+      width: double.infinity,
+      height: height,
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: imageWidget,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final task = widget.item.task;
     final progress = _totalSeconds > 0
         ? (_remainingSeconds / _totalSeconds)
         : 0.0;
 
+    final heroImage = _buildBigImageBox(task.iconPath, height: 190);
+
     return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(task.title),
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF1E293B),
+        backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+        foregroundColor: isDark
+            ? const Color(0xFFF8FAFC)
+            : const Color(0xFF1E293B),
         elevation: 0,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Instrukciós szöveg kártya (hangszóró csak saját hangfelvételnél)
+                  // Instrukciós szöveg + hangszóró
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(
@@ -170,18 +213,22 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                       vertical: 12,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF1F5F9),
-                      borderRadius: BorderRadius.circular(12),
+                      color: isDark
+                          ? const Color(0xFF1E293B)
+                          : const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                     child: Row(
                       children: [
                         Expanded(
                           child: Text(
-                            task.ttsText,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              color: Color(0xFF334155),
-                              fontWeight: FontWeight.w500,
+                            task.ttsText.isNotEmpty ? task.ttsText : task.title,
+                            style: TextStyle(
+                              fontSize: 17,
+                              color: isDark
+                                  ? const Color(0xFFF8FAFC)
+                                  : const Color(0xFF334155),
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
@@ -189,7 +236,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                           const SizedBox(width: 8),
                           IconButton(
                             iconSize: 32,
-                            tooltip: 'Hang lejátszása',
+                            tooltip: 'Meghallgatás',
                             icon: const Icon(
                               Icons.volume_up_rounded,
                               color: Color(0xFF2563EB),
@@ -201,19 +248,27 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                     ),
                   ),
 
+                  // Nagy fő kép az időzítő felett
+                  if (heroImage != null) ...[
+                    const SizedBox(height: 14),
+                    heroImage,
+                  ],
+
                   const SizedBox(height: 20),
 
-                  // Vizuális kör alakú időzítő
+                  // Időzítő
                   Stack(
                     alignment: Alignment.center,
                     children: [
                       SizedBox(
-                        width: 170,
-                        height: 170,
+                        width: 155,
+                        height: 155,
                         child: CircularProgressIndicator(
                           value: progress,
                           strokeWidth: 12,
-                          backgroundColor: const Color(0xFFE2E8F0),
+                          backgroundColor: isDark
+                              ? const Color(0xFF334155)
+                              : const Color(0xFFE2E8F0),
                           valueColor: AlwaysStoppedAnimation<Color>(
                             progress > 0.25
                                 ? const Color(0xFF81C784)
@@ -226,18 +281,22 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                         children: [
                           Text(
                             _formatTime(_remainingSeconds),
-                            style: const TextStyle(
-                              fontSize: 32,
+                            style: TextStyle(
+                              fontSize: 30,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF1E293B),
+                              color: isDark
+                                  ? const Color(0xFFF8FAFC)
+                                  : const Color(0xFF1E293B),
                             ),
                           ),
                           const SizedBox(height: 4),
-                          const Text(
+                          Text(
                             'hátralévő idő',
                             style: TextStyle(
                               fontSize: 13,
-                              color: Color(0xFF64748B),
+                              color: isDark
+                                  ? const Color(0xFF94A3B8)
+                                  : const Color(0xFF64748B),
                             ),
                           ),
                         ],
@@ -247,7 +306,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
                   const SizedBox(height: 16),
 
-                  // Időzítő kezelőgombok
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -282,7 +340,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                       const SizedBox(width: 12),
                       OutlinedButton.icon(
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF64748B),
+                          foregroundColor: isDark
+                              ? const Color(0xFFCBD5E1)
+                              : const Color(0xFF64748B),
                           padding: const EdgeInsets.symmetric(
                             horizontal: 16,
                             vertical: 12,
@@ -303,14 +363,16 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                   const Divider(color: Color(0xFFE2E8F0)),
                   const SizedBox(height: 12),
 
-                  const Align(
+                  Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
                       'Lépések:',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF1E293B),
+                        color: isDark
+                            ? const Color(0xFFF8FAFC)
+                            : const Color(0xFF1E293B),
                       ),
                     ),
                   ),
@@ -320,7 +382,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                       ? const Padding(
                           padding: EdgeInsets.symmetric(vertical: 16),
                           child: Text(
-                            'Nincsenek részletes lépések ehhez a feladathoz.',
+                            'Nincsenek lépések.',
                             style: TextStyle(color: Color(0xFF64748B)),
                           ),
                         )
@@ -333,86 +395,137 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                             final isDone = _completedStepIds.contains(
                               subtask.id,
                             );
-                            final hasStepAudio =
-                                subtask.audioPath != null &&
-                                subtask.audioPath!.isNotEmpty;
+
+                            // Ha a mikrolépésnek van saját képe, azt mutatja;
+                            // ha szülői feladatnál nincs külön lépéskép, örökli a fő képet.
+                            final stepImgPath =
+                                (subtask.iconPath != null &&
+                                    subtask.iconPath!.trim().isNotEmpty)
+                                ? subtask.iconPath
+                                : task.iconPath;
+
+                            final stepImage = _buildBigImageBox(
+                              stepImgPath,
+                              height: 165,
+                            );
 
                             return Card(
                               elevation: 0,
-                              margin: const EdgeInsets.symmetric(vertical: 5),
+                              margin: const EdgeInsets.symmetric(vertical: 7),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(16),
                                 side: BorderSide(
                                   color: isDone
                                       ? const Color(0xFF81C784)
-                                      : const Color(0xFFCBD5E1),
+                                      : (isDark
+                                            ? const Color(0xFF334155)
+                                            : const Color(0xFFCBD5E1)),
+                                  width: 1.5,
                                 ),
                               ),
                               color: isDone
-                                  ? const Color(0xFFF1F8E9)
-                                  : Colors.white,
-                              child: ListTile(
-                                onTap: hasStepAudio
-                                    ? () => _playStepAudio(subtask)
-                                    : null,
-                                leading: CircleAvatar(
-                                  radius: 16,
-                                  backgroundColor: isDone
-                                      ? const Color(0xFF81C784)
-                                      : const Color(0xFFE2E8F0),
-                                  foregroundColor: isDone
-                                      ? Colors.white
-                                      : const Color(0xFF475569),
-                                  child: Text('${subtask.stepOrder}'),
-                                ),
-                                title: Text(
-                                  subtask.description,
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    decoration: isDone
-                                        ? TextDecoration.lineThrough
-                                        : null,
-                                    color: isDone
-                                        ? const Color(0xFF64748B)
-                                        : const Color(0xFF1E293B),
-                                  ),
-                                ),
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
+                                  ? (isDark
+                                        ? const Color(
+                                            0xFF064E3B,
+                                          ).withValues(alpha: 0.35)
+                                        : const Color(0xFFF1F8E9))
+                                  : (isDark
+                                        ? const Color(0xFF1E293B)
+                                        : Colors.white),
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    if (hasStepAudio)
-                                      IconButton(
-                                        icon: const Icon(
-                                          Icons.volume_up_rounded,
-                                          color: Color(0xFF3B82F6),
-                                          size: 22,
+                                    Row(
+                                      children: [
+                                        CircleAvatar(
+                                          radius: 16,
+                                          backgroundColor: isDone
+                                              ? const Color(0xFF81C784)
+                                              : const Color(0xFFE2E8F0),
+                                          foregroundColor: isDone
+                                              ? Colors.white
+                                              : const Color(0xFF475569),
+                                          child: Text(
+                                            '${subtask.stepOrder}',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
                                         ),
-                                        tooltip: 'Hang lejátszása',
-                                        onPressed: () =>
-                                            _playStepAudio(subtask),
-                                      ),
-                                    IconButton(
-                                      icon: Icon(
-                                        isDone
-                                            ? Icons.check_circle_rounded
-                                            : Icons
-                                                  .radio_button_unchecked_rounded,
-                                        color: isDone
-                                            ? const Color(0xFF4CAF50)
-                                            : const Color(0xFF94A3B8),
-                                      ),
-                                      onPressed: () {
-                                        setState(() {
-                                          if (isDone) {
-                                            _completedStepIds.remove(
-                                              subtask.id,
-                                            );
-                                          } else {
-                                            _completedStepIds.add(subtask.id!);
-                                          }
-                                        });
-                                      },
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: InkWell(
+                                            onTap: () =>
+                                                _playStepAudio(subtask),
+                                            child: Text(
+                                              subtask.description,
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w600,
+                                                decoration: isDone
+                                                    ? TextDecoration.lineThrough
+                                                    : null,
+                                                color: isDone
+                                                    ? const Color(0xFF64748B)
+                                                    : (isDark
+                                                          ? const Color(
+                                                              0xFFF8FAFC,
+                                                            )
+                                                          : const Color(
+                                                              0xFF1E293B,
+                                                            )),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        IconButton(
+                                          padding: const EdgeInsets.all(4),
+                                          constraints: const BoxConstraints(),
+                                          icon: const Icon(
+                                            Icons.volume_up_rounded,
+                                            color: Color(0xFF3B82F6),
+                                            size: 26,
+                                          ),
+                                          tooltip: 'Meghallgatás',
+                                          onPressed: () =>
+                                              _playStepAudio(subtask),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        IconButton(
+                                          padding: const EdgeInsets.all(4),
+                                          constraints: const BoxConstraints(),
+                                          icon: Icon(
+                                            isDone
+                                                ? Icons.check_circle_rounded
+                                                : Icons
+                                                      .radio_button_unchecked_rounded,
+                                            color: isDone
+                                                ? const Color(0xFF4CAF50)
+                                                : const Color(0xFF94A3B8),
+                                            size: 28,
+                                          ),
+                                          onPressed: () {
+                                            setState(() {
+                                              if (isDone) {
+                                                _completedStepIds.remove(
+                                                  subtask.id,
+                                                );
+                                              } else {
+                                                _completedStepIds.add(
+                                                  subtask.id!,
+                                                );
+                                              }
+                                            });
+                                          },
+                                        ),
+                                      ],
                                     ),
+                                    if (stepImage != null) ...[
+                                      const SizedBox(height: 10),
+                                      stepImage,
+                                    ],
                                   ],
                                 ),
                               ),

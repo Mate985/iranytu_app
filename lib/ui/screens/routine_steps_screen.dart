@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../data/models/routine_step_model.dart';
 import '../../services/database_service.dart';
@@ -55,6 +56,96 @@ class _RoutineStepsScreenState extends State<RoutineStepsScreen> {
     await _dbService.resetRoutineSteps(routine.id);
   }
 
+  Widget _buildRoutineLeading(Routine routine, bool isDark) {
+    const double coverSize = 64;
+    final fallback = Container(
+      width: coverSize,
+      height: coverSize,
+      decoration: BoxDecoration(
+        color: routine.themeColor.withValues(alpha: isDark ? 0.25 : 0.15),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Icon(routine.icon, color: routine.themeColor, size: 32),
+    );
+
+    final path = routine.imagePath?.trim() ?? '';
+    if (path.isEmpty) return fallback;
+
+    Widget? img;
+    if (path.startsWith('assets/')) {
+      img = Image.asset(
+        path,
+        width: coverSize,
+        height: coverSize,
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) => fallback,
+      );
+    } else if (File(path).existsSync()) {
+      img = Image.file(
+        File(path),
+        width: coverSize,
+        height: coverSize,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => fallback,
+      );
+    }
+
+    if (img == null) return fallback;
+
+    return Container(
+      width: coverSize,
+      height: coverSize,
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: routine.themeColor.withValues(alpha: 0.35),
+          width: 1.5,
+        ),
+      ),
+      child: ClipRRect(borderRadius: BorderRadius.circular(10), child: img),
+    );
+  }
+
+  Widget? _buildBigStepImage(String? rawPath) {
+    final path = rawPath?.trim() ?? '';
+    if (path.isEmpty) return null;
+
+    Widget? img;
+    if (path.startsWith('assets/')) {
+      img = Image.asset(
+        path,
+        width: double.infinity,
+        height: 165,
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+      );
+    } else if (File(path).existsSync()) {
+      img = Image.file(
+        File(path),
+        width: double.infinity,
+        height: 165,
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+      );
+    }
+
+    if (img == null) return null;
+
+    return Container(
+      width: double.infinity,
+      height: 165,
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: ClipRRect(borderRadius: BorderRadius.circular(10), child: img),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -80,7 +171,7 @@ class _RoutineStepsScreenState extends State<RoutineStepsScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : ListView.separated(
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 110),
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 130),
               itemCount: _routines.length,
               separatorBuilder: (_, __) => const SizedBox(height: 14),
               itemBuilder: (context, index) {
@@ -108,19 +199,9 @@ class _RoutineStepsScreenState extends State<RoutineStepsScreen> {
                       initiallyExpanded: index == 0,
                       tilePadding: const EdgeInsets.symmetric(
                         horizontal: 14,
-                        vertical: 8,
+                        vertical: 10,
                       ),
-                      leading: CircleAvatar(
-                        radius: 22,
-                        backgroundColor: routine.themeColor.withValues(
-                          alpha: isDark ? 0.25 : 0.15,
-                        ),
-                        child: Icon(
-                          routine.icon,
-                          color: routine.themeColor,
-                          size: 26,
-                        ),
-                      ),
+                      leading: _buildRoutineLeading(routine, isDark),
                       title: Text(
                         routine.title,
                         style: TextStyle(
@@ -193,85 +274,92 @@ class _RoutineStepsScreenState extends State<RoutineStepsScreen> {
                                     ? const Color(0xFF334155)
                                     : const Color(0xFFE2E8F0));
 
+                          final bigStepImg = _buildBigStepImage(step.imagePath);
+
                           return Container(
                             margin: const EdgeInsets.symmetric(
                               horizontal: 10,
-                              vertical: 5,
+                              vertical: 6,
                             ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 8,
-                            ),
+                            padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
                               color: stepBgColor,
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(14),
                               border: Border.all(color: stepBorderColor),
                             ),
-                            child: Row(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                CircleAvatar(
-                                  radius: 14,
-                                  backgroundColor: step.isCompleted
-                                      ? const Color(0xFF22C55E)
-                                      : (isDark
-                                            ? const Color(0xFF334155)
-                                            : const Color(0xFFE2E8F0)),
-                                  child: step.isCompleted
-                                      ? const Icon(
-                                          Icons.check,
-                                          size: 15,
-                                          color: Colors.white,
-                                        )
-                                      : Text(
-                                          '${stepIndex + 1}',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                            color: isDark
-                                                ? const Color(0xFF94A3B8)
-                                                : const Color(0xFF475569),
+                                Row(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 15,
+                                      backgroundColor: step.isCompleted
+                                          ? const Color(0xFF22C55E)
+                                          : (isDark
+                                                ? const Color(0xFF334155)
+                                                : const Color(0xFFE2E8F0)),
+                                      child: step.isCompleted
+                                          ? const Icon(
+                                              Icons.check,
+                                              size: 16,
+                                              color: Colors.white,
+                                            )
+                                          : Text(
+                                              '${stepIndex + 1}',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.bold,
+                                                color: isDark
+                                                    ? const Color(0xFF94A3B8)
+                                                    : const Color(0xFF475569),
+                                              ),
+                                            ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: InkWell(
+                                        borderRadius: BorderRadius.circular(8),
+                                        onTap: () =>
+                                            AudioService.instance.speakOrPlay(
+                                              text: step.title,
+                                              audioPath: step.audioPath,
+                                            ),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 4,
                                           ),
-                                        ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: InkWell(
-                                    borderRadius: BorderRadius.circular(8),
-                                    onTap: () =>
-                                        AudioService.instance.speakOrPlay(
-                                          text: step.title,
-                                          audioPath: step.audioPath,
-                                        ),
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 4,
-                                      ),
-                                      child: Text(
-                                        step.title,
-                                        softWrap: true,
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w500,
-                                          height: 1.3,
-                                          decoration: step.isCompleted
-                                              ? TextDecoration.lineThrough
-                                              : TextDecoration.none,
-                                          color: step.isCompleted
-                                              ? (isDark
-                                                    ? const Color(0xFF4ADE80)
-                                                    : const Color(0xFF15803D))
-                                              : (isDark
-                                                    ? const Color(0xFFF8FAFC)
-                                                    : const Color(0xFF1E293B)),
+                                          child: Text(
+                                            step.title,
+                                            softWrap: true,
+                                            style: TextStyle(
+                                              fontSize: 15.5,
+                                              fontWeight: FontWeight.w600,
+                                              height: 1.3,
+                                              decoration: step.isCompleted
+                                                  ? TextDecoration.lineThrough
+                                                  : TextDecoration.none,
+                                              color: step.isCompleted
+                                                  ? (isDark
+                                                        ? const Color(
+                                                            0xFF4ADE80,
+                                                          )
+                                                        : const Color(
+                                                            0xFF15803D,
+                                                          ))
+                                                  : (isDark
+                                                        ? const Color(
+                                                            0xFFF8FAFC,
+                                                          )
+                                                        : const Color(
+                                                            0xFF1E293B,
+                                                          )),
+                                            ),
+                                          ),
                                         ),
                                       ),
                                     ),
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
+                                    const SizedBox(width: 4),
                                     IconButton(
                                       padding: const EdgeInsets.all(4),
                                       constraints: const BoxConstraints(),
@@ -280,9 +368,9 @@ class _RoutineStepsScreenState extends State<RoutineStepsScreen> {
                                         color: isDark
                                             ? const Color(0xFF60A5FA)
                                             : const Color(0xFF2563EB),
-                                        size: 22,
+                                        size: 24,
                                       ),
-                                      tooltip: 'Hang lejátszása',
+                                      tooltip: 'Meghallgatás',
                                       onPressed: () =>
                                           AudioService.instance.speakOrPlay(
                                             text: step.title,
@@ -308,6 +396,10 @@ class _RoutineStepsScreenState extends State<RoutineStepsScreen> {
                                     ),
                                   ],
                                 ),
+                                if (bigStepImg != null) ...[
+                                  const SizedBox(height: 10),
+                                  bigStepImg,
+                                ],
                               ],
                             ),
                           );
@@ -329,7 +421,7 @@ class _RoutineStepsScreenState extends State<RoutineStepsScreen> {
                                       size: 20,
                                       color: Color(0xFF64748B),
                                     ),
-                                    tooltip: 'Rutin szerkesztése (Szülői)',
+                                    tooltip: 'Szerkesztés',
                                     onPressed: () async {
                                       final isAuthorized =
                                           await ParentalPinDialog.show(context);
@@ -353,7 +445,7 @@ class _RoutineStepsScreenState extends State<RoutineStepsScreen> {
                                       size: 20,
                                       color: Color(0xFFEF4444),
                                     ),
-                                    tooltip: 'Rutin törlése (Szülői)',
+                                    tooltip: 'Törlés',
                                     onPressed: () async {
                                       final isAuthorized =
                                           await ParentalPinDialog.show(context);
@@ -381,7 +473,7 @@ class _RoutineStepsScreenState extends State<RoutineStepsScreen> {
                                             ),
                                           ),
                                           content: Text(
-                                            'Biztosan törölni szeretnéd a(z) "${routine.title}" rutint a lépéseivel együtt?',
+                                            'Törlöd a(z) "${routine.title}" rutint?',
                                             style: TextStyle(
                                               color: isDark
                                                   ? const Color(0xFF94A3B8)
@@ -438,7 +530,7 @@ class _RoutineStepsScreenState extends State<RoutineStepsScreen> {
                                   color: Color(0xFF64748B),
                                 ),
                                 label: const Text(
-                                  'Újrakezdés',
+                                  'Újra',
                                   style: TextStyle(color: Color(0xFF64748B)),
                                 ),
                               ),

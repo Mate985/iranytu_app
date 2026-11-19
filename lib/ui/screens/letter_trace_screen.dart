@@ -764,7 +764,7 @@ class _LetterTraceScreenState extends State<LetterTraceScreen> {
       );
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Próbáld meg pontosabban követni a szürke vonalat! ✍️'),
+          content: Text('Kövesd a szürke vonalat! ✍️'),
           duration: Duration(seconds: 2),
           backgroundColor: Color(0xFF64748B),
         ),
@@ -785,9 +785,8 @@ class _LetterTraceScreenState extends State<LetterTraceScreen> {
 
     GameSuccessDialog.show(
       context,
-      title: 'Szép betűírás! ✍️',
-      message:
-          'Sikeresen átrajzoltad a(z) "${_current.letter}" betűt (${_current.word})!',
+      title: 'Ügyes vagy! ✍️',
+      message: 'Szép "${_current.letter}" betű (${_current.word})!',
       earnedStar: earnedStar,
       audioPath: 'assets/audio/words/hurra_nagyon_ugyes_vagy.mp3',
       onNext: () {
@@ -828,7 +827,7 @@ class _LetterTraceScreenState extends State<LetterTraceScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                'Válassz egy betűt a gyakorláshoz (44 betű):',
+                'Válassz betűt:',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -1183,7 +1182,7 @@ class _LetterTraceScreenState extends State<LetterTraceScreen> {
                     size: 20,
                   ),
                   label: const Text(
-                    'Kész vagyok a betűvel!',
+                    'Kész!',
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,

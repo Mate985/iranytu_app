@@ -52,19 +52,19 @@ class _RoutineSequenceGameScreenState extends State<RoutineSequenceGameScreen> {
         ),
         RoutineStepItem(
           id: 2,
-          title: 'Használj szappant és habosíts',
+          title: 'Szappanozd be',
           emoji: '🧼',
           audioPath: 'assets/audio/words/hasznalj_szappant.mp3',
         ),
         RoutineStepItem(
           id: 3,
-          title: 'Öblítsd le a habot vízzel',
+          title: 'Öblítsd le',
           emoji: '🚿',
           audioPath: 'assets/audio/words/oblitsd_le_a_habot.mp3',
         ),
         RoutineStepItem(
           id: 4,
-          title: 'Töröld szárazra törölközővel',
+          title: 'Töröld meg',
           emoji: '🧻',
           audioPath: 'assets/audio/words/torold_szarazra_a_torolkozovel.mp3',
         ),
@@ -75,25 +75,25 @@ class _RoutineSequenceGameScreenState extends State<RoutineSequenceGameScreen> {
       correctSteps: [
         RoutineStepItem(
           id: 1,
-          title: 'Tegyél fogkrémet a kefére',
+          title: 'Fogkrém a kefére',
           emoji: '🪥',
           audioPath: 'assets/audio/words/tegyel_fogkremet_a_kefere.mp3',
         ),
         RoutineStepItem(
           id: 2,
-          title: 'Moss fogat alaposan körkörösen',
+          title: 'Moss fogat',
           emoji: '😁',
           audioPath: 'assets/audio/words/moss_fogat_alaposan.mp3',
         ),
         RoutineStepItem(
           id: 3,
-          title: 'Öblítsd ki a szád vízzel',
+          title: 'Öblítsd ki a szád',
           emoji: '🚰',
           audioPath: 'assets/audio/words/oblitsd_ki_a_szad.mp3',
         ),
         RoutineStepItem(
           id: 4,
-          title: 'Mosd el a fogkefét és tedd el',
+          title: 'Tedd el a kefét',
           emoji: '✨',
           audioPath: 'assets/audio/words/mosd_el_a_fogkefet.mp3',
         ),
@@ -104,7 +104,7 @@ class _RoutineSequenceGameScreenState extends State<RoutineSequenceGameScreen> {
       correctSteps: [
         RoutineStepItem(
           id: 1,
-          title: 'Nézd meg a holnapi órarendet',
+          title: 'Nézd meg az órarendet',
           emoji: '📅',
           audioPath: 'assets/audio/words/nezd_meg_a_holnapi.mp3',
         ),
@@ -116,13 +116,13 @@ class _RoutineSequenceGameScreenState extends State<RoutineSequenceGameScreen> {
         ),
         RoutineStepItem(
           id: 3,
-          title: 'Rakd be a tolltartót és vizes palackot',
+          title: 'Tedd be a tolltartót',
           emoji: '✏️',
           audioPath: 'assets/audio/words/rakd_be_a_tolltartot.mp3',
         ),
         RoutineStepItem(
           id: 4,
-          title: 'Húzd be a táska cipzárját',
+          title: 'Húzd be a táskát',
           emoji: '🎒',
           audioPath: 'assets/audio/words/huzd_be_a_taska_zipzarjat.mp3',
         ),
@@ -139,13 +139,13 @@ class _RoutineSequenceGameScreenState extends State<RoutineSequenceGameScreen> {
         ),
         RoutineStepItem(
           id: 2,
-          title: 'Vedd fel az alsóneműt és zoknit',
+          title: 'Vedd fel a zoknit',
           emoji: '🧦',
           audioPath: 'assets/audio/words/vedd_fel_az_alsonemut.mp3',
         ),
         RoutineStepItem(
           id: 3,
-          title: 'Bújj bele a nadrágba és pólóba',
+          title: 'Vedd fel a nadrágot és pólót',
           emoji: '👕',
           audioPath: 'assets/audio/words/bujj_bele_a_nadragba.mp3',
         ),
@@ -162,32 +162,32 @@ class _RoutineSequenceGameScreenState extends State<RoutineSequenceGameScreen> {
       correctSteps: [
         RoutineStepItem(
           id: 1,
-          title: 'Moss kezet alaposan',
+          title: 'Moss kezet',
           emoji: '🧼',
           audioPath: 'assets/audio/words/moss_kezet_alaposan.mp3',
         ),
         RoutineStepItem(
           id: 2,
-          title: 'Tedd az asztalra a tányért és evőeszközt',
+          title: 'Teríts meg',
           emoji: '🍽️',
           audioPath: 'assets/audio/words/tedd_az_asztalra_a_tanyert.mp3',
         ),
         RoutineStepItem(
           id: 3,
-          title: 'Ülj le és egyél nyugodtan',
+          title: 'Ülj le és egyél',
           emoji: '🍲',
           audioPath: 'assets/audio/words/ulj_le_es_egyel.mp3',
         ),
         RoutineStepItem(
           id: 4,
-          title: 'Vidd a mosogatóba az üres tányért',
+          title: 'Vidd el a tányért',
           emoji: '🥣',
           audioPath: 'assets/audio/words/vidd_a_mosogatoba_az_ures.mp3',
         ),
       ],
     ),
     RoutineScenario(
-      title: 'Indulás elinduláskor',
+      title: 'Indulás otthonról',
       correctSteps: [
         RoutineStepItem(
           id: 1,
@@ -197,7 +197,7 @@ class _RoutineSequenceGameScreenState extends State<RoutineSequenceGameScreen> {
         ),
         RoutineStepItem(
           id: 2,
-          title: 'Kösd be vagy tépőzárazd be a cipőt',
+          title: 'Kösd be a cipőt',
           emoji: '👟',
           audioPath: 'assets/audio/words/kosd_be_a_cipot.mp3',
         ),
@@ -209,7 +209,7 @@ class _RoutineSequenceGameScreenState extends State<RoutineSequenceGameScreen> {
         ),
         RoutineStepItem(
           id: 4,
-          title: 'Húzd fel a kabát cipzárját',
+          title: 'Húzd fel a cipzárt',
           emoji: '🔒',
           audioPath: 'assets/audio/words/huzd_fel_a_kabat_zipzarjat.mp3',
         ),
@@ -220,25 +220,25 @@ class _RoutineSequenceGameScreenState extends State<RoutineSequenceGameScreen> {
       correctSteps: [
         RoutineStepItem(
           id: 1,
-          title: 'Moss fogat a fürdőszobában',
+          title: 'Moss fogat',
           emoji: '🪥',
           audioPath: 'assets/audio/words/moss_fogat_a_furdoben.mp3',
         ),
         RoutineStepItem(
           id: 2,
-          title: 'Vedd fel a kényelmes pizsamát',
+          title: 'Vedd fel a pizsamát',
           emoji: '🥱',
           audioPath: 'assets/audio/words/vedd_fel_a_pizsamat.mp3',
         ),
         RoutineStepItem(
           id: 3,
-          title: 'Bújj be az ágyba a takaró alá',
+          title: 'Bújj ágyba',
           emoji: '🛏️',
           audioPath: 'assets/audio/words/bujj_be_az_agyba.mp3',
         ),
         RoutineStepItem(
           id: 4,
-          title: 'Kapcsold le a lámpát és pihenj',
+          title: 'Aludj el',
           emoji: '🌙',
           audioPath: 'assets/audio/words/kapcsold_le_a_lampat.mp3',
         ),
@@ -249,83 +249,83 @@ class _RoutineSequenceGameScreenState extends State<RoutineSequenceGameScreen> {
       correctSteps: [
         RoutineStepItem(
           id: 1,
-          title: 'Hagyd abba a játékot időben',
+          title: 'Fejezd be a játékot',
           emoji: '⏰',
           audioPath: 'assets/audio/words/hagyd_abba_a_jatekot.mp3',
         ),
         RoutineStepItem(
           id: 2,
-          title: 'Szedd össze a kockákat a földről',
+          title: 'Szedd össze a játékokat',
           emoji: '🧩',
           audioPath: 'assets/audio/words/szedd_ossze_a_kockakat.mp3',
         ),
         RoutineStepItem(
           id: 3,
-          title: 'Tedd be őket a játéktároló dobozba',
+          title: 'Tedd a dobozba',
           emoji: '📦',
           audioPath: 'assets/audio/words/tedd_be_oket_a_dobozba.mp3',
         ),
         RoutineStepItem(
           id: 4,
-          title: 'Told a dobozt a helyére a polcra',
+          title: 'Tedd a helyére',
           emoji: '🧸',
           audioPath: 'assets/audio/words/told_a_dobozt_a_helyere.mp3',
         ),
       ],
     ),
     RoutineScenario(
-      title: 'Esti fürdés / Zuhanyzás',
+      title: 'Esti fürdés',
       correctSteps: [
         RoutineStepItem(
           id: 1,
-          title: 'Készítsd elő a tiszta törölközőt',
+          title: 'Készítsd elő a törölközőt',
           emoji: '🧻',
           audioPath: 'assets/audio/words/keszits_elo_tiszta_torolkozot.mp3',
         ),
         RoutineStepItem(
           id: 2,
-          title: 'Lépj be a kádba vagy zuhanyzóba',
+          title: 'Lépj a kádba',
           emoji: '🛁',
           audioPath: 'assets/audio/words/lepj_be_a_kadba.mp3',
         ),
         RoutineStepItem(
           id: 3,
-          title: 'Mosd meg a tested tusfürdővel',
+          title: 'Mosakodj meg',
           emoji: '🧼',
           audioPath: 'assets/audio/words/mosd_meg_a_testedet.mp3',
         ),
         RoutineStepItem(
           id: 4,
-          title: 'Törölközz meg alaposan szárazra',
+          title: 'Törölközz meg',
           emoji: '✨',
           audioPath: 'assets/audio/words/torolkozz_meg_alaposan.mp3',
         ),
       ],
     ),
     RoutineScenario(
-      title: 'Hazaérkezés iskola után',
+      title: 'Hazaérkezés',
       correctSteps: [
         RoutineStepItem(
           id: 1,
-          title: 'Vedd le a cipőd az előszobában',
+          title: 'Vedd le a cipőd',
           emoji: '👟',
           audioPath: 'assets/audio/words/vedd_le_a_cipod.mp3',
         ),
         RoutineStepItem(
           id: 2,
-          title: 'Akaszd fel a kabátodat a fogasra',
+          title: 'Akaszd fel a kabátot',
           emoji: '🧥',
           audioPath: 'assets/audio/words/akaszd_fel_a_kabatot.mp3',
         ),
         RoutineStepItem(
           id: 3,
-          title: 'Moss alaposan kezet meleg vízzel',
+          title: 'Moss kezet',
           emoji: '🧼',
           audioPath: 'assets/audio/words/moss_alaposan_kezet.mp3',
         ),
         RoutineStepItem(
           id: 4,
-          title: 'Vedd ki az uzsonnás dobozt a táskából',
+          title: 'Vedd ki az uzsonnásdobozt',
           emoji: '🍎',
           audioPath:
               'assets/audio/words/vedd_ki_az_uzsonnasdobozt_a_taskadbol.mp3',
@@ -440,9 +440,8 @@ class _RoutineSequenceGameScreenState extends State<RoutineSequenceGameScreen> {
 
       GameSuccessDialog.show(
         context,
-        title: 'Sikerült a rutin! 🌟',
-        message:
-            'Hibátlanul összeraktad a(z) "${_currentScenario.title}" lépéseit!',
+        title: 'Ügyes vagy! 🌟',
+        message: 'Jó a sorrend: ${_currentScenario.title}!',
         earnedStar: earnedStar,
         audioPath: 'assets/audio/words/hurra_nagyon_ugyes_vagy.mp3',
         onNext: () {
@@ -456,9 +455,7 @@ class _RoutineSequenceGameScreenState extends State<RoutineSequenceGameScreen> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'Még nincs teljesen jó helyen. Próbáld meg áthúzni a kártyákat!',
-          ),
+          content: Text('Még nem jó a sorrend. Próbáld újra!'),
           duration: Duration(seconds: 2),
           backgroundColor: Color(0xFF64748B),
         ),
@@ -633,7 +630,7 @@ class _RoutineSequenceGameScreenState extends State<RoutineSequenceGameScreen> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            'Húzd ujjaddal a kártyákat a jó sorrendbe!',
+                            'Húzd a kártyákat jó sorrendbe!',
                             style: TextStyle(
                               fontSize: 12,
                               color: isDark
@@ -759,7 +756,7 @@ class _RoutineSequenceGameScreenState extends State<RoutineSequenceGameScreen> {
                     color: Colors.white,
                   ),
                   label: const Text(
-                    'Kész vagyok! Ellenőrzés',
+                    'Kész!',
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,

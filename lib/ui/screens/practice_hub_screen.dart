@@ -201,7 +201,7 @@ class PracticeHubScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Mit szeretnél játszani?',
+                        'Mit játszunk?',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -212,7 +212,7 @@ class PracticeHubScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Gyakorolj bátran, gyűjts csillagokat!',
+                        'Gyűjts csillagokat!',
                         style: TextStyle(
                           fontSize: 14,
                           color: isDark
@@ -232,7 +232,7 @@ class PracticeHubScreen extends StatelessWidget {
           _buildGameCard(
             context: context,
             title: 'Memória Párkereső 🧠',
-            subtitle: 'Fordítsd fel a kártyákat és találd meg a párokat!',
+            subtitle: 'Találd meg a párokat!',
             icon: Icons.grid_view_rounded,
             cardColor: isDark
                 ? const Color(0xFF0F766E).withValues(alpha: 0.35)
@@ -251,7 +251,7 @@ class PracticeHubScreen extends StatelessWidget {
           _buildGameCard(
             context: context,
             title: 'Kakukktojás Kereső 🐣',
-            subtitle: 'Melyik nem illik a többi közé? Találd meg!',
+            subtitle: 'Melyik nem illik ide?',
             icon: Icons.rule_rounded,
             cardColor: isDark
                 ? const Color(0xFFB45309).withValues(alpha: 0.3)
@@ -270,7 +270,7 @@ class PracticeHubScreen extends StatelessWidget {
           _buildGameCard(
             context: context,
             title: 'Beszélő Számtábla',
-            subtitle: 'Ismerd meg a számokat játékosan hanggal és képpel!',
+            subtitle: 'Számolj és hallgasd!',
             icon: Icons.pin_rounded,
             cardColor: isDark
                 ? const Color(0xFF0369A1).withValues(alpha: 0.3)
@@ -289,7 +289,7 @@ class PracticeHubScreen extends StatelessWidget {
           _buildGameCard(
             context: context,
             title: 'Kép és Szó Kaland',
-            subtitle: 'Kösd össze a szavakat a megfelelő képekkel!',
+            subtitle: 'Párosítsd a képet és a szót!',
             icon: Icons.menu_book_rounded,
             cardColor: isDark
                 ? const Color(0xFF92400E).withValues(alpha: 0.3)
@@ -308,7 +308,7 @@ class PracticeHubScreen extends StatelessWidget {
           _buildGameCard(
             context: context,
             title: 'Rutin Sorrendrakó',
-            subtitle: 'Rakd helyes sorrendbe a napirendi lépéseket!',
+            subtitle: 'Rakd sorrendbe a lépéseket!',
             icon: Icons.format_list_numbered_rounded,
             cardColor: isDark
                 ? const Color(0xFF166534).withValues(alpha: 0.3)
@@ -327,7 +327,7 @@ class PracticeHubScreen extends StatelessWidget {
           _buildGameCard(
             context: context,
             title: 'Nyugis Vonalvezető',
-            subtitle: 'Kövess lassú, szép formákat az ujjaddal!',
+            subtitle: 'Kövesd a vonalat az ujjaddal!',
             icon: Icons.gesture_rounded,
             cardColor: isDark
                 ? const Color(0xFF6B21A8).withValues(alpha: 0.3)
@@ -346,7 +346,7 @@ class PracticeHubScreen extends StatelessWidget {
           _buildGameCard(
             context: context,
             title: 'ABC Betűíró ✍️',
-            subtitle: 'Gyakorold a betűk rajzolását, kiejtését és a szavakat!',
+            subtitle: 'Rajzold át a betűt!',
             icon: Icons.edit_note_rounded,
             cardColor: isDark
                 ? const Color(0xFF1E40AF).withValues(alpha: 0.3)
@@ -365,7 +365,7 @@ class PracticeHubScreen extends StatelessWidget {
           _buildGameCard(
             context: context,
             title: 'Szókirakó Kaland 🔤',
-            subtitle: 'Rakd ki a szavakat a megfelelő betűk érintésével!',
+            subtitle: 'Rakd ki a szót!',
             icon: Icons.spellcheck_rounded,
             cardColor: isDark
                 ? const Color(0xFF991B1B).withValues(alpha: 0.3)

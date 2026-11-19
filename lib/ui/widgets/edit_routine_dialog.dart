@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../data/models/routine_step_model.dart';
 import '../../services/database_service.dart';
 import '../../services/audio_service.dart';
@@ -26,9 +27,12 @@ class _EditRoutineDialogState extends State<EditRoutineDialog> {
   late TextEditingController _descController;
   late List<TextEditingController> _stepControllers;
   late List<String?> _stepAudioPaths;
+  late List<String?> _stepImagePaths;
+  String? _routineImagePath;
   late Color _selectedColor;
 
   int? _recordingStepIndex;
+  final ImagePicker _picker = ImagePicker();
 
   final List<Color> _availableColors = [
     const Color(0xFF38BDF8),
@@ -48,16 +52,19 @@ class _EditRoutineDialogState extends State<EditRoutineDialog> {
     _titleController = TextEditingController(text: widget.routine.title);
     _descController = TextEditingController(text: widget.routine.description);
     _selectedColor = widget.routine.themeColor;
+    _routineImagePath = widget.routine.imagePath;
 
     _stepControllers = widget.routine.steps
         .map((s) => TextEditingController(text: s.title))
         .toList();
 
     _stepAudioPaths = widget.routine.steps.map((s) => s.audioPath).toList();
+    _stepImagePaths = widget.routine.steps.map((s) => s.imagePath).toList();
 
     if (_stepControllers.isEmpty) {
       _stepControllers.add(TextEditingController());
       _stepAudioPaths.add(null);
+      _stepImagePaths.add(null);
     }
   }
 
@@ -75,16 +82,55 @@ class _EditRoutineDialogState extends State<EditRoutineDialog> {
     setState(() {
       _stepControllers.add(TextEditingController());
       _stepAudioPaths.add(null);
+      _stepImagePaths.add(null);
     });
   }
 
   void _removeStep(int index) {
     if (_stepControllers.length > 1) {
+      if (_recordingStepIndex == index) {
+        AudioService.instance.stopRecording();
+        _recordingStepIndex = null;
+      } else if (_recordingStepIndex != null && _recordingStepIndex! > index) {
+        _recordingStepIndex = _recordingStepIndex! - 1;
+      }
       setState(() {
+        _stepControllers[index].dispose();
         _stepControllers.removeAt(index);
         _stepAudioPaths.removeAt(index);
+        _stepImagePaths.removeAt(index);
       });
     }
+  }
+
+  Future<void> _pickStepImage(int index, ImageSource source) async {
+    try {
+      final XFile? img = await _picker.pickImage(
+        source: source,
+        maxWidth: 700,
+        imageQuality: 80,
+      );
+      if (img != null) {
+        setState(() {
+          _stepImagePaths[index] = img.path;
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _pickRoutineImage(ImageSource source) async {
+    try {
+      final XFile? img = await _picker.pickImage(
+        source: source,
+        maxWidth: 700,
+        imageQuality: 80,
+      );
+      if (img != null) {
+        setState(() {
+          _routineImagePath = img.path;
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _toggleRecord(int index) async {
@@ -104,16 +150,36 @@ class _EditRoutineDialogState extends State<EditRoutineDialog> {
       final success = await audio.startRecording();
       if (success) {
         setState(() => _recordingStepIndex = index);
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Mikrofon engedély szükséges!')),
+        );
       }
     }
   }
 
   Future<void> _playRecording(String path) async {
-    await AudioService.instance.playAudio(path);
+    if (File(path).existsSync()) {
+      await AudioService.instance.playAudio(path);
+    }
+  }
+
+  void _deleteAudio(int index) {
+    setState(() {
+      _stepAudioPaths[index] = null;
+    });
   }
 
   Future<void> _saveChanges() async {
     if (!_formKey.currentState!.validate()) return;
+
+    if (_recordingStepIndex != null) {
+      final path = await AudioService.instance.stopRecording();
+      if (path != null) {
+        _stepAudioPaths[_recordingStepIndex!] = path;
+      }
+      _recordingStepIndex = null;
+    }
 
     final List<RoutineStep> updatedSteps = [];
     for (int i = 0; i < _stepControllers.length; i++) {
@@ -127,11 +193,16 @@ class _EditRoutineDialogState extends State<EditRoutineDialog> {
             ? widget.routine.steps[i].isCompleted
             : false;
 
+        final existingIcon = (i < widget.routine.steps.length)
+            ? widget.routine.steps[i].icon
+            : Icons.check_circle_outline_rounded;
+
         updatedSteps.add(
           RoutineStep(
             id: existingId,
-            title: text.endsWith('.') ? text : '$text.',
-            icon: Icons.check_circle_outline_rounded,
+            title: text,
+            icon: existingIcon,
+            imagePath: _stepImagePaths[i],
             isCompleted: existingCompleted,
             audioPath: _stepAudioPaths[i],
           ),
@@ -140,9 +211,9 @@ class _EditRoutineDialogState extends State<EditRoutineDialog> {
     }
 
     if (updatedSteps.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Legalább 1 lépést meg kell adni!')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Legalább 1 lépés kell!')));
       return;
     }
 
@@ -151,6 +222,7 @@ class _EditRoutineDialogState extends State<EditRoutineDialog> {
       title: _titleController.text.trim(),
       description: _descController.text.trim(),
       icon: widget.routine.icon,
+      imagePath: _routineImagePath,
       themeColor: _selectedColor,
       steps: updatedSteps,
     );
@@ -164,9 +236,7 @@ class _EditRoutineDialogState extends State<EditRoutineDialog> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Rutin törlése'),
-        content: Text(
-          'Biztosan törölni szeretnéd a(z) "${widget.routine.title}" rutint?',
-        ),
+        content: Text('Törlöd a(z) "${widget.routine.title}" rutint?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -191,8 +261,13 @@ class _EditRoutineDialogState extends State<EditRoutineDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final hasRoutineImg =
+        _routineImagePath != null &&
+        !_routineImagePath!.startsWith('assets/') &&
+        File(_routineImagePath!).existsSync();
+
     return AlertDialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 20),
       title: Row(
         children: [
           const Expanded(
@@ -233,9 +308,37 @@ class _EditRoutineDialogState extends State<EditRoutineDialog> {
                   controller: _descController,
                   decoration: const InputDecoration(labelText: 'Rövid leírás'),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    if (hasRoutineImg)
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.file(
+                          File(_routineImagePath!),
+                          width: 48,
+                          height: 48,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.photo_library_rounded, size: 17),
+                      label: const Text('Borítókép'),
+                      onPressed: () => _pickRoutineImage(ImageSource.gallery),
+                    ),
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.camera_alt_rounded, size: 17),
+                      label: const Text('Kamera'),
+                      onPressed: () => _pickRoutineImage(ImageSource.camera),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
                 const Text(
-                  'Szín kiválasztása:',
+                  'Szín:',
                   style: TextStyle(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 8),
@@ -261,89 +364,184 @@ class _EditRoutineDialogState extends State<EditRoutineDialog> {
                 ),
                 const SizedBox(height: 16),
                 const Text(
-                  'Lépések és saját hangok szerkesztése:',
+                  'Lépések (kép + saját hang):',
                   style: TextStyle(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 8),
                 ..._stepControllers.asMap().entries.map((entry) {
                   final idx = entry.key;
                   final ctrl = entry.value;
-                  final hasAudio =
-                      _stepAudioPaths[idx] != null &&
-                      _stepAudioPaths[idx]!.isNotEmpty &&
-                      File(_stepAudioPaths[idx]!).existsSync();
+                  final stepAudio = _stepAudioPaths[idx];
+                  final hasLocalAudio =
+                      stepAudio != null &&
+                      stepAudio.isNotEmpty &&
+                      !stepAudio.startsWith('assets/') &&
+                      File(stepAudio).existsSync();
+                  final stepImg = _stepImagePaths[idx];
+                  final hasLocalImg =
+                      stepImg != null &&
+                      !stepImg.startsWith('assets/') &&
+                      File(stepImg).existsSync();
                   final isRec = _recordingStepIndex == idx;
 
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8.0),
-                    child: Row(
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 10.0),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isRec
+                          ? const Color(0xFFFEE2E2)
+                          : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isRec
+                            ? const Color(0xFFEF4444)
+                            : const Color(0xFFE2E8F0),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        CircleAvatar(
-                          radius: 12,
-                          backgroundColor: const Color(0xFFE2E8F0),
-                          child: Text(
-                            '${idx + 1}',
-                            style: const TextStyle(fontSize: 11),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: TextField(
-                            controller: ctrl,
-                            decoration: InputDecoration(
-                              hintText: '${idx + 1}. lépés',
-                              isDense: true,
+                        // 1. sor: sorszám/kép + szövegmező + lépés törlése
+                        Row(
+                          children: [
+                            if (hasLocalImg)
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.file(
+                                  File(stepImg),
+                                  width: 34,
+                                  height: 34,
+                                  fit: BoxFit.cover,
+                                ),
+                              )
+                            else
+                              CircleAvatar(
+                                radius: 12,
+                                backgroundColor: isRec
+                                    ? const Color(0xFFEF4444)
+                                    : const Color(0xFFE2E8F0),
+                                child: Text(
+                                  '${idx + 1}',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: isRec
+                                        ? Colors.white
+                                        : Colors.black87,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: TextField(
+                                controller: ctrl,
+                                style: const TextStyle(fontSize: 14),
+                                decoration: InputDecoration(
+                                  hintText: '${idx + 1}. lépés',
+                                  isDense: true,
+                                  border: InputBorder.none,
+                                ),
+                              ),
                             ),
-                          ),
+                            if (_stepControllers.length > 1)
+                              IconButton(
+                                padding: const EdgeInsets.all(4),
+                                constraints: const BoxConstraints(),
+                                icon: const Icon(
+                                  Icons.close_rounded,
+                                  color: Colors.redAccent,
+                                  size: 20,
+                                ),
+                                tooltip: 'Lépés törlése',
+                                onPressed: () => _removeStep(idx),
+                              ),
+                          ],
                         ),
-                        if (hasAudio && !isRec)
-                          IconButton(
-                            padding: const EdgeInsets.all(4),
-                            constraints: const BoxConstraints(),
-                            icon: const Icon(
-                              Icons.play_circle_fill_rounded,
-                              color: Color(0xFF10B981),
-                              size: 20,
+                        const SizedBox(height: 6),
+                        // 2. sor: kép- és hangvezérlők tördelhetően (nincs overflow)
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            IconButton(
+                              padding: const EdgeInsets.all(6),
+                              constraints: const BoxConstraints(),
+                              icon: Icon(
+                                Icons.image_rounded,
+                                color: hasLocalImg
+                                    ? const Color(0xFF16A34A)
+                                    : const Color(0xFF0284C7),
+                                size: 22,
+                              ),
+                              tooltip: 'Kép galériából',
+                              onPressed: () =>
+                                  _pickStepImage(idx, ImageSource.gallery),
                             ),
-                            tooltip: 'Felvétel meghallgatása',
-                            onPressed: () =>
-                                _playRecording(_stepAudioPaths[idx]!),
-                          ),
-                        const SizedBox(width: 2),
-                        IconButton(
-                          padding: const EdgeInsets.all(4),
-                          constraints: const BoxConstraints(),
-                          icon: Icon(
-                            isRec
-                                ? Icons.stop_circle_rounded
-                                : (hasAudio
-                                      ? Icons.mic_rounded
-                                      : Icons.mic_none_rounded),
-                            color: isRec
-                                ? const Color(0xFFEF4444)
-                                : (hasAudio
-                                      ? const Color(0xFF2563EB)
-                                      : const Color(0xFF94A3B8)),
-                            size: 20,
-                          ),
-                          tooltip: isRec
-                              ? 'Felvétel leállítása'
-                              : (hasAudio ? 'Újrafelvétel' : 'Hang felvétele'),
-                          onPressed: () => _toggleRecord(idx),
+                            IconButton(
+                              padding: const EdgeInsets.all(6),
+                              constraints: const BoxConstraints(),
+                              icon: const Icon(
+                                Icons.camera_alt_rounded,
+                                color: Color(0xFF64748B),
+                                size: 22,
+                              ),
+                              tooltip: 'Fotó kamerával',
+                              onPressed: () =>
+                                  _pickStepImage(idx, ImageSource.camera),
+                            ),
+                            IconButton(
+                              padding: const EdgeInsets.all(6),
+                              constraints: const BoxConstraints(),
+                              icon: Icon(
+                                isRec
+                                    ? Icons.stop_circle_rounded
+                                    : (hasLocalAudio
+                                          ? Icons.mic_rounded
+                                          : Icons.mic_none_rounded),
+                                color: isRec
+                                    ? const Color(0xFFEF4444)
+                                    : (hasLocalAudio
+                                          ? const Color(0xFF2563EB)
+                                          : const Color(0xFF64748B)),
+                                size: 22,
+                              ),
+                              tooltip: isRec
+                                  ? 'Felvétel leállítása'
+                                  : (hasLocalAudio
+                                        ? 'Újrafelvétel'
+                                        : 'Hang felvétele'),
+                              onPressed: () => _toggleRecord(idx),
+                            ),
+                            if (hasLocalAudio && !isRec) ...[
+                              IconButton(
+                                padding: const EdgeInsets.all(6),
+                                constraints: const BoxConstraints(),
+                                icon: const Icon(
+                                  Icons.play_circle_fill_rounded,
+                                  color: Color(0xFF10B981),
+                                  size: 22,
+                                ),
+                                tooltip: 'Felvétel meghallgatása',
+                                onPressed: () => _playRecording(stepAudio),
+                              ),
+                              IconButton(
+                                padding: const EdgeInsets.all(6),
+                                constraints: const BoxConstraints(),
+                                icon: const Icon(
+                                  Icons.delete_outline_rounded,
+                                  color: Color(0xFF94A3B8),
+                                  size: 20,
+                                ),
+                                tooltip: 'Hang törlése',
+                                onPressed: () => _deleteAudio(idx),
+                              ),
+                            ],
+                          ],
                         ),
-                        if (_stepControllers.length > 1) ...[
-                          const SizedBox(width: 2),
-                          IconButton(
-                            padding: const EdgeInsets.all(4),
-                            constraints: const BoxConstraints(),
-                            icon: const Icon(
-                              Icons.close_rounded,
-                              color: Colors.redAccent,
-                              size: 18,
-                            ),
-                            onPressed: () => _removeStep(idx),
-                          ),
-                        ],
                       ],
                     ),
                   );
@@ -351,7 +549,7 @@ class _EditRoutineDialogState extends State<EditRoutineDialog> {
                 TextButton.icon(
                   onPressed: _addStep,
                   icon: const Icon(Icons.add_rounded),
-                  label: const Text('Új lépés hozzáadása'),
+                  label: const Text('Új lépés'),
                 ),
               ],
             ),
@@ -360,7 +558,12 @@ class _EditRoutineDialogState extends State<EditRoutineDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context, false),
+          onPressed: () {
+            if (_recordingStepIndex != null) {
+              AudioService.instance.stopRecording();
+            }
+            Navigator.pop(context, false);
+          },
           child: const Text('Mégse'),
         ),
         ElevatedButton(
@@ -368,10 +571,7 @@ class _EditRoutineDialogState extends State<EditRoutineDialog> {
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF2563EB),
           ),
-          child: const Text(
-            'Módosítások mentése',
-            style: TextStyle(color: Colors.white),
-          ),
+          child: const Text('Mentés', style: TextStyle(color: Colors.white)),
         ),
       ],
     );

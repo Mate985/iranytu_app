@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../providers/routine_provider.dart';
 import '../../services/audio_service.dart';
@@ -22,22 +23,23 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   TimeOfDay _selectedTime = const TimeOfDay(hour: 8, minute: 0);
   String _selectedColor = '#81C784';
   String _selectedIcon = 'brush';
+  String? _pickedImagePath;
 
-  // Fő feladat saját hangfelvétele
   String? _recordedAudioPath;
   bool _isRecordingMain = false;
 
-  // Mikrolépések vezérlői és hangfelvételei
   final List<TextEditingController> _stepControllers = [];
   final List<String?> _stepAudioPaths = [];
   int? _recordingStepIndex;
 
+  final ImagePicker _picker = ImagePicker();
+
   final List<String> _availableColors = [
-    '#81C784', // Zöld
-    '#64B5F6', // Kék
-    '#FFB74D', // Narancs
-    '#BA68C8', // Lila
-    '#E57373', // Piros
+    '#81C784',
+    '#64B5F6',
+    '#FFB74D',
+    '#BA68C8',
+    '#E57373',
   ];
 
   @override
@@ -80,6 +82,22 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     }
     AudioService.instance.stopAll();
     super.dispose();
+  }
+
+  Future<void> _pickTaskImage(ImageSource source) async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: source,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
+      if (image != null) {
+        setState(() {
+          _pickedImagePath = image.path;
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _toggleMainRecording() async {
@@ -182,6 +200,10 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     }
 
     final descriptions = _stepControllers.map((c) => c.text.trim()).toList();
+    final visualPath =
+        (_pickedImagePath != null && _pickedImagePath!.isNotEmpty)
+        ? _pickedImagePath!
+        : _selectedIcon;
 
     await context.read<RoutineProvider>().addNewTaskWithSchedule(
       title: _titleController.text.trim(),
@@ -190,7 +212,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
       duration: int.tryParse(_durationController.text.trim()) ?? 10,
       scheduledTime: _formatTimeOfDay(_selectedTime),
       colorCode: _selectedColor,
-      iconPath: _selectedIcon,
+      iconPath: visualPath,
       stepDescriptions: descriptions,
       stepAudioPaths: _stepAudioPaths,
     );
@@ -207,6 +229,8 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
         _recordedAudioPath != null &&
         _recordedAudioPath!.isNotEmpty &&
         File(_recordedAudioPath!).existsSync();
+    final hasPickedPhoto =
+        _pickedImagePath != null && File(_pickedImagePath!).existsSync();
     final bottomInset = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
@@ -224,7 +248,6 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
           child: ListView(
             padding: EdgeInsets.fromLTRB(16, 16, 16, bottomInset + 88),
             children: [
-              // Feladat megnevezése
               TextFormField(
                 controller: _titleController,
                 decoration: InputDecoration(
@@ -240,7 +263,6 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Instrukciós szöveg + MIKROFON & VISSZAHALLGATÁS
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -248,11 +270,11 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                     child: TextFormField(
                       controller: _ttsTextController,
                       decoration: InputDecoration(
-                        labelText: 'Instrukció a gyermeknek',
-                        hintText: 'Pl. Egyél meg egy finom almát!',
+                        labelText: 'Instrukció (rövid)',
+                        hintText: 'Pl. Egyél egy almát!',
                         helperText: hasMainAudio
                             ? 'Saját hangfelvétel rögzítve! ✅'
-                            : 'Opcionálisan felveheted saját hangoddal.',
+                            : 'Opcionális saját hang.',
                         helperStyle: TextStyle(
                           color: hasMainAudio
                               ? const Color(0xFF16A34A)
@@ -279,7 +301,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                         color: Color(0xFF16A34A),
                         size: 26,
                       ),
-                      tooltip: 'Felvétel meghallgatása',
+                      tooltip: 'Meghallgatás',
                       onPressed: () => _playAudioFile(_recordedAudioPath),
                     ),
                   IconButton.filledTonal(
@@ -304,18 +326,13 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                                 : const Color(0xFF64748B)),
                       size: 26,
                     ),
-                    tooltip: _isRecordingMain
-                        ? 'Felvétel leállítása'
-                        : (hasMainAudio
-                              ? 'Újrafelvétel'
-                              : 'Saját hang felvétele'),
+                    tooltip: _isRecordingMain ? 'Leállítás' : 'Hang felvétele',
                     onPressed: _toggleMainRecording,
                   ),
                 ],
               ),
               const SizedBox(height: 16),
 
-              // Időtartam és Tervezett időpont egy sorban
               Row(
                 children: [
                   Expanded(
@@ -355,9 +372,9 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
               ),
               const SizedBox(height: 20),
 
-              // Piktogram választó
+              // Saját fotó / Kép feltöltése a feladathoz
               Text(
-                'Piktogram kiválasztása:',
+                'Saját kép / fotó (opcionális):',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   color: isDark
@@ -366,67 +383,144 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              SizedBox(
-                height: 72,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: AppIcons.availableIcons.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 8),
-                  itemBuilder: (context, index) {
-                    final item = AppIcons.availableIcons[index];
-                    final isSelected = item.key == _selectedIcon;
-                    return GestureDetector(
-                      onTap: () => setState(() => _selectedIcon = item.key),
-                      child: Container(
-                        width: 64,
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? const Color(0xFF81C784).withValues(alpha: 0.15)
-                              : (isDark
-                                    ? const Color(0xFF1E293B)
-                                    : const Color(0xFFF1F5F9)),
+              Row(
+                children: [
+                  if (hasPickedPhoto) ...[
+                    Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        ClipRRect(
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: isSelected
-                                ? const Color(0xFF81C784)
-                                : Colors.transparent,
-                            width: 2,
+                          child: Image.file(
+                            File(_pickedImagePath!),
+                            width: 64,
+                            height: 64,
+                            fit: BoxFit.cover,
                           ),
                         ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              item.icon,
-                              color: isSelected
-                                  ? const Color(0xFF2E7D32)
-                                  : const Color(0xFF64748B),
-                              size: 26,
+                        Positioned(
+                          top: -6,
+                          right: -6,
+                          child: GestureDetector(
+                            onTap: () =>
+                                setState(() => _pickedImagePath = null),
+                            child: Container(
+                              padding: const EdgeInsets.all(3),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFEF4444),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.close_rounded,
+                                size: 14,
+                                color: Colors.white,
+                              ),
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              item.label,
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: isSelected
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                  Expanded(
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        OutlinedButton.icon(
+                          icon: const Icon(
+                            Icons.photo_library_rounded,
+                            size: 18,
+                          ),
+                          label: const Text('Galéria'),
+                          onPressed: () => _pickTaskImage(ImageSource.gallery),
+                        ),
+                        OutlinedButton.icon(
+                          icon: const Icon(Icons.camera_alt_rounded, size: 18),
+                          label: const Text('Kamera'),
+                          onPressed: () => _pickTaskImage(ImageSource.camera),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              if (!hasPickedPhoto) ...[
+                Text(
+                  'Vagy válassz piktogramot:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: isDark
+                        ? const Color(0xFFE2E8F0)
+                        : const Color(0xFF334155),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 72,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: AppIcons.availableIcons.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemBuilder: (context, index) {
+                      final item = AppIcons.availableIcons[index];
+                      final isSelected = item.key == _selectedIcon;
+                      return GestureDetector(
+                        onTap: () => setState(() => _selectedIcon = item.key),
+                        child: Container(
+                          width: 64,
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? const Color(
+                                    0xFF81C784,
+                                  ).withValues(alpha: 0.15)
+                                : (isDark
+                                      ? const Color(0xFF1E293B)
+                                      : const Color(0xFFF1F5F9)),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isSelected
+                                  ? const Color(0xFF81C784)
+                                  : Colors.transparent,
+                              width: 2,
+                            ),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                item.icon,
                                 color: isSelected
                                     ? const Color(0xFF2E7D32)
                                     : const Color(0xFF64748B),
+                                size: 26,
                               ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
+                              const SizedBox(height: 4),
+                              Text(
+                                item.label,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: isSelected
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                  color: isSelected
+                                      ? const Color(0xFF2E7D32)
+                                      : const Color(0xFF64748B),
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
-              ),
-              const SizedBox(height: 20),
+                const SizedBox(height: 20),
+              ],
 
-              // Kártya színe
               Text(
                 'Kártya színe:',
                 style: TextStyle(
@@ -467,7 +561,6 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
               const Divider(),
               const SizedBox(height: 12),
 
-              // Mikrolépések fejléc
               Row(
                 children: [
                   Expanded(
@@ -506,7 +599,6 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
               ),
               const SizedBox(height: 8),
 
-              // Mikrolépések soronként (mikrofonnal és visszahallgatással)
               ..._stepControllers.asMap().entries.map((entry) {
                 final idx = entry.key;
                 final controller = entry.value;
@@ -535,7 +627,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                         child: TextFormField(
                           controller: controller,
                           decoration: InputDecoration(
-                            hintText: '${idx + 1}. lépés leírása',
+                            hintText: '${idx + 1}. lépés',
                             isDense: true,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10),
@@ -553,7 +645,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                             color: Color(0xFF16A34A),
                             size: 22,
                           ),
-                          tooltip: 'Lépés hangjának meghallgatása',
+                          tooltip: 'Meghallgatás',
                           onPressed: () => _playAudioFile(stepAudio),
                         ),
                       ],
@@ -574,11 +666,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                                     : const Color(0xFF64748B)),
                           size: 22,
                         ),
-                        tooltip: isStepRec
-                            ? 'Felvétel leállítása'
-                            : (hasStepAudio
-                                  ? 'Újrafelvétel'
-                                  : 'Lépés felmondása mikrofonnal'),
+                        tooltip: isStepRec ? 'Leállítás' : 'Hang felvétele',
                         onPressed: () => _toggleStepRecording(idx),
                       ),
                       if (_stepControllers.length > 1) ...[
@@ -601,7 +689,6 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
 
               const SizedBox(height: 30),
 
-              // Mentés gomb
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF81C784),
@@ -613,7 +700,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                 ),
                 onPressed: _saveTask,
                 child: const Text(
-                  'Feladat mentése a mai napirendbe',
+                  'Feladat mentése',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),

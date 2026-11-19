@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../data/models/daily_schedule_model.dart';
@@ -57,9 +58,7 @@ class TaskCard extends StatelessWidget {
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Feladat törlése'),
-        content: Text(
-          'Biztosan törölni szeretnéd a(z) "${item.task.title}" feladatot a mai napirendből?',
-        ),
+        content: Text('Törlöd a(z) "${item.task.title}" feladatot?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
@@ -81,6 +80,56 @@ class TaskCard extends StatelessWidget {
         item.schedule.id!,
       );
     }
+  }
+
+  Widget _buildLeadingVisual(bool isCompleted, bool isDark) {
+    if (isCompleted) {
+      return const CircleAvatar(
+        radius: 22,
+        backgroundColor: Color(0xFF81C784),
+        child: Icon(Icons.check_rounded, color: Colors.white, size: 24),
+      );
+    }
+
+    final fallbackIcon = CircleAvatar(
+      radius: 22,
+      backgroundColor: const Color(
+        0xFF81C784,
+      ).withValues(alpha: isDark ? 0.25 : 0.15),
+      child: Icon(
+        AppIcons.getIcon(item.task.iconPath),
+        color: isDark ? const Color(0xFF81C784) : const Color(0xFF2E7D32),
+        size: 24,
+      ),
+    );
+
+    final path = item.task.iconPath?.trim() ?? '';
+    if (path.startsWith('assets/')) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.asset(
+          path,
+          width: 46,
+          height: 46,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => fallbackIcon,
+        ),
+      );
+    }
+    if (path.isNotEmpty && File(path).existsSync()) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.file(
+          File(path),
+          width: 46,
+          height: 46,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => fallbackIcon,
+        ),
+      );
+    }
+
+    return fallbackIcon;
   }
 
   @override
@@ -140,25 +189,7 @@ class TaskCard extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: Row(
               children: [
-                CircleAvatar(
-                  radius: 22,
-                  backgroundColor: isCompleted
-                      ? const Color(0xFF81C784)
-                      : const Color(
-                          0xFF81C784,
-                        ).withValues(alpha: isDark ? 0.25 : 0.15),
-                  child: Icon(
-                    isCompleted
-                        ? Icons.check_rounded
-                        : AppIcons.getIcon(item.task.iconPath),
-                    color: isCompleted
-                        ? Colors.white
-                        : (isDark
-                              ? const Color(0xFF81C784)
-                              : const Color(0xFF2E7D32)),
-                    size: 24,
-                  ),
-                ),
+                _buildLeadingVisual(isCompleted, isDark),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -194,8 +225,7 @@ class TaskCard extends StatelessWidget {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              item.schedule.scheduledTime ??
-                                  'Időpont beállítása',
+                              item.schedule.scheduledTime ?? 'Időpont',
                               style: TextStyle(
                                 fontSize: 12.5,
                                 fontWeight: FontWeight.w600,
@@ -228,7 +258,7 @@ class TaskCard extends StatelessWidget {
                             : const Color(0xFF2563EB),
                         size: 24,
                       ),
-                      tooltip: 'Felolvasás / Hang lejátszása',
+                      tooltip: 'Felolvasás',
                       onPressed: () {
                         final textToSpeak = item.task.ttsText.trim().isNotEmpty
                             ? item.task.ttsText

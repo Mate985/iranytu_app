@@ -7,6 +7,20 @@ import '../../providers/reward_provider.dart';
 import '../../data/models/reward_model.dart';
 import '../widgets/parental_pin_dialog.dart';
 
+class _RoomRewardEntry {
+  final RewardModel reward;
+  final int copyIndex;
+  final int badgeCount;
+
+  const _RoomRewardEntry({
+    required this.reward,
+    required this.copyIndex,
+    required this.badgeCount,
+  });
+
+  String get uniqueKey => '${reward.id}_$copyIndex';
+}
+
 class MyRoomScreen extends StatefulWidget {
   const MyRoomScreen({super.key});
 
@@ -20,7 +34,7 @@ class _MyRoomScreenState extends State<MyRoomScreen> {
   bool _isEditMode = false;
   String? _customPhotoPath;
 
-  final Map<int, Offset> _dragPositions = {};
+  final Map<String, Offset> _dragPositions = {};
 
   @override
   void initState() {
@@ -72,7 +86,7 @@ class _MyRoomScreenState extends State<MyRoomScreen> {
   Widget _buildRewardWidget(
     RewardModel reward, {
     double size = 54,
-    int count = 1,
+    int badgeCount = 1,
   }) {
     Widget baseWidget;
 
@@ -143,7 +157,7 @@ class _MyRoomScreenState extends State<MyRoomScreen> {
       );
     }
 
-    if (count <= 1) return baseWidget;
+    if (badgeCount <= 1) return baseWidget;
 
     return Stack(
       clipBehavior: Clip.none,
@@ -166,7 +180,7 @@ class _MyRoomScreenState extends State<MyRoomScreen> {
               ],
             ),
             child: Text(
-              'x$count',
+              'x$badgeCount',
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 11,
@@ -183,6 +197,7 @@ class _MyRoomScreenState extends State<MyRoomScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final rewardProv = context.read<RewardProvider>();
     final count = rewardProv.getRedeemCount(reward.id);
+    final showBadge = rewardProv.stackRewardsInRoom ? count : 1;
 
     showDialog(
       context: context,
@@ -193,10 +208,12 @@ class _MyRoomScreenState extends State<MyRoomScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(height: 10),
-            _buildRewardWidget(reward, size: 76, count: count),
+            _buildRewardWidget(reward, size: 76, badgeCount: showBadge),
             const SizedBox(height: 16),
             Text(
-              count > 1 ? '${reward.title} (x$count)' : reward.title,
+              (rewardProv.stackRewardsInRoom && count > 1)
+                  ? '${reward.title} (x$count)'
+                  : reward.title,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 20,
@@ -208,9 +225,7 @@ class _MyRoomScreenState extends State<MyRoomScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              count > 1
-                  ? 'Ügyes vagy! Ebből a jutalomból már $count darabot gyűjtöttél össze! 🏆⭐'
-                  : 'Büszke lehetsz magadra, ezt a trófeát az ügyességedért kaptad! 🏆⭐',
+              'Ügyes vagy! Megszerezted! 🏆⭐',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
@@ -237,7 +252,7 @@ class _MyRoomScreenState extends State<MyRoomScreen> {
                     ),
                   ),
                   child: const Text(
-                    'Szuper vagyok!',
+                    'Szuper!',
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -254,14 +269,9 @@ class _MyRoomScreenState extends State<MyRoomScreen> {
 
                   await rewardProv.fulfillReward(reward);
                   if (!mounted) return;
-                  final remaining = rewardProv.getRedeemCount(reward.id);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(
-                        remaining > 0
-                            ? '1 db "${reward.title}" teljesítve! (Még $remaining db maradt a polcon) ✅'
-                            : '"${reward.title}" teljesítve és elpakolva a polcról! ✅',
-                      ),
+                      content: Text('Jutalom teljesítve: ${reward.title} ✅'),
                       backgroundColor: const Color(0xFF0D9488),
                     ),
                   );
@@ -273,8 +283,8 @@ class _MyRoomScreenState extends State<MyRoomScreen> {
                 ),
                 label: Text(
                   count > 1
-                      ? 'Szülői jóváhagyás: 1 db teljesítve (-1)'
-                      : 'Szülői jóváhagyás: Jutalom teljesítve',
+                      ? 'Szülői: 1 db teljesítve (-1)'
+                      : 'Szülői: Jutalom teljesítve',
                   style: const TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w600,
@@ -445,8 +455,42 @@ class _MyRoomScreenState extends State<MyRoomScreen> {
     return Consumer<RewardProvider>(
       builder: (context, rewardProv, child) {
         final redeemed = rewardProv.redeemedRewards;
-        final placedRewards = redeemed.where((r) => r.isPlaced).toList();
-        final unplacedRewards = redeemed.where((r) => !r.isPlaced).toList();
+        final isStacked = rewardProv.stackRewardsInRoom;
+
+        final List<_RoomRewardEntry> placedEntries = [];
+        final List<_RoomRewardEntry> unplacedEntries = [];
+
+        for (final reward in redeemed) {
+          if (reward.id == null) continue;
+          final rewardId = reward.id!;
+          final totalCount = rewardProv.getRedeemCount(rewardId);
+
+          if (isStacked) {
+            final entry = _RoomRewardEntry(
+              reward: reward,
+              copyIndex: 0,
+              badgeCount: totalCount,
+            );
+            if (rewardProv.isInstancePlaced(rewardId, 0, reward)) {
+              placedEntries.add(entry);
+            } else {
+              unplacedEntries.add(entry);
+            }
+          } else {
+            for (int i = 0; i < totalCount; i++) {
+              final entry = _RoomRewardEntry(
+                reward: reward,
+                copyIndex: i,
+                badgeCount: 1,
+              );
+              if (rewardProv.isInstancePlaced(rewardId, i, reward)) {
+                placedEntries.add(entry);
+              } else {
+                unplacedEntries.add(entry);
+              }
+            }
+          }
+        }
 
         return Scaffold(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -463,6 +507,33 @@ class _MyRoomScreenState extends State<MyRoomScreen> {
                 : const Color(0xFF78350F),
             elevation: 0,
             actions: [
+              IconButton(
+                tooltip: isStacked
+                    ? 'Egyenkénti megjelenítés (számláló nélkül)'
+                    : 'Halmozott megjelenítés (számlálóval)',
+                icon: Icon(
+                  isStacked
+                      ? Icons.filter_none_rounded
+                      : Icons.grid_view_rounded,
+                  color: isDark
+                      ? const Color(0xFFFDE68A)
+                      : const Color(0xFF78350F),
+                  size: 24,
+                ),
+                onPressed: () {
+                  rewardProv.toggleStackRewardsInRoom();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        rewardProv.stackRewardsInRoom
+                            ? 'Halmozott nézet (x2, x3)'
+                            : 'Egyenkénti nézet (külön ikonok)',
+                      ),
+                      duration: const Duration(seconds: 1),
+                    ),
+                  );
+                },
+              ),
               IconButton(
                 tooltip: _isEditMode
                     ? 'Elrendezés kész'
@@ -732,7 +803,7 @@ class _MyRoomScreenState extends State<MyRoomScreen> {
                                             ),
                                           ),
                                           Text(
-                                            'Válts be jutalmakat, és tedd ki őket a polcokra!',
+                                            'Válts be jutalmakat!',
                                             style: TextStyle(
                                               fontSize: 11,
                                               color: isDark
@@ -749,19 +820,24 @@ class _MyRoomScreenState extends State<MyRoomScreen> {
                             ),
                           ),
 
-                        ...placedRewards.map((reward) {
-                          if (reward.id == null) return const SizedBox.shrink();
+                        ...placedEntries.map((entry) {
+                          final reward = entry.reward;
                           final rewardId = reward.id!;
-                          final count = rewardProv.getRedeemCount(rewardId);
+                          final key = entry.uniqueKey;
+                          final normPos = rewardProv.getInstancePosition(
+                            rewardId,
+                            entry.copyIndex,
+                            reward,
+                          );
 
                           final currentOffset =
-                              _dragPositions[rewardId] ??
+                              _dragPositions[key] ??
                               Offset(
-                                (reward.roomX * (roomWidth - 60)).clamp(
+                                (normPos.dx * (roomWidth - 60)).clamp(
                                   10.0,
                                   roomWidth - 70,
                                 ),
-                                (reward.roomY * (roomHeight - 60)).clamp(
+                                (normPos.dy * (roomHeight - 60)).clamp(
                                   10.0,
                                   roomHeight - 70,
                                 ),
@@ -780,8 +856,7 @@ class _MyRoomScreenState extends State<MyRoomScreen> {
                               onPanStart: _isEditMode
                                   ? (_) {
                                       setState(() {
-                                        _dragPositions[rewardId] =
-                                            currentOffset;
+                                        _dragPositions[key] = currentOffset;
                                       });
                                     }
                                   : null,
@@ -789,7 +864,7 @@ class _MyRoomScreenState extends State<MyRoomScreen> {
                                   ? (details) {
                                       setState(() {
                                         final prev =
-                                            _dragPositions[rewardId] ??
+                                            _dragPositions[key] ??
                                             currentOffset;
                                         final nextX =
                                             (prev.dx + details.delta.dx).clamp(
@@ -801,7 +876,7 @@ class _MyRoomScreenState extends State<MyRoomScreen> {
                                               10.0,
                                               roomHeight - 70,
                                             );
-                                        _dragPositions[rewardId] = Offset(
+                                        _dragPositions[key] = Offset(
                                           nextX,
                                           nextY,
                                         );
@@ -811,8 +886,7 @@ class _MyRoomScreenState extends State<MyRoomScreen> {
                               onPanEnd: _isEditMode
                                   ? (_) async {
                                       final finalOffset =
-                                          _dragPositions[rewardId] ??
-                                          currentOffset;
+                                          _dragPositions[key] ?? currentOffset;
                                       final normX =
                                           (finalOffset.dx / (roomWidth - 60))
                                               .clamp(0.0, 1.0);
@@ -820,15 +894,16 @@ class _MyRoomScreenState extends State<MyRoomScreen> {
                                           (finalOffset.dy / (roomHeight - 60))
                                               .clamp(0.0, 1.0);
 
-                                      await rewardProv.updateRewardPosition(
+                                      await rewardProv.updateInstancePosition(
                                         rewardId,
+                                        entry.copyIndex,
                                         true,
                                         normX,
                                         normY,
                                       );
                                       if (mounted) {
                                         setState(() {
-                                          _dragPositions.remove(rewardId);
+                                          _dragPositions.remove(key);
                                         });
                                       }
                                     }
@@ -839,7 +914,7 @@ class _MyRoomScreenState extends State<MyRoomScreen> {
                                   _buildRewardWidget(
                                     reward,
                                     size: 54,
-                                    count: count,
+                                    badgeCount: entry.badgeCount,
                                   ),
                                   if (_isEditMode)
                                     Positioned(
@@ -847,13 +922,15 @@ class _MyRoomScreenState extends State<MyRoomScreen> {
                                       top: -6,
                                       child: GestureDetector(
                                         onTap: () async {
-                                          _dragPositions.remove(rewardId);
-                                          await rewardProv.updateRewardPosition(
-                                            rewardId,
-                                            false,
-                                            0.5,
-                                            0.5,
-                                          );
+                                          _dragPositions.remove(key);
+                                          await rewardProv
+                                              .updateInstancePosition(
+                                                rewardId,
+                                                entry.copyIndex,
+                                                false,
+                                                0.5,
+                                                0.5,
+                                              );
                                         },
                                         child: Container(
                                           padding: const EdgeInsets.all(3),
@@ -902,7 +979,7 @@ class _MyRoomScreenState extends State<MyRoomScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Kattints rá, hogy kitehesd a szobába:',
+                            'Érintsd meg, hogy kitehesd a polcra:',
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.bold,
@@ -913,10 +990,10 @@ class _MyRoomScreenState extends State<MyRoomScreen> {
                           ),
                           const SizedBox(height: 10),
                           Expanded(
-                            child: unplacedRewards.isEmpty
+                            child: unplacedEntries.isEmpty
                                 ? Center(
                                     child: Text(
-                                      'Minden beváltott trófeád a polcokon van!',
+                                      'Minden trófea a polcokon van!',
                                       style: TextStyle(
                                         fontSize: 12,
                                         color: isDark
@@ -927,21 +1004,21 @@ class _MyRoomScreenState extends State<MyRoomScreen> {
                                   )
                                 : ListView.separated(
                                     scrollDirection: Axis.horizontal,
-                                    itemCount: unplacedRewards.length,
+                                    itemCount: unplacedEntries.length,
                                     separatorBuilder: (_, __) =>
                                         const SizedBox(width: 14),
                                     itemBuilder: (context, index) {
-                                      final reward = unplacedRewards[index];
-                                      final count = rewardProv.getRedeemCount(
-                                        reward.id,
-                                      );
+                                      final entry = unplacedEntries[index];
+                                      final reward = entry.reward;
                                       return InkWell(
                                         onTap: () {
                                           if (reward.id != null) {
-                                            rewardProv.updateRewardPosition(
+                                            rewardProv.updateInstancePosition(
                                               reward.id!,
+                                              entry.copyIndex,
                                               true,
-                                              0.45,
+                                              (0.25 + (entry.copyIndex * 0.14))
+                                                  .clamp(0.15, 0.8),
                                               0.18,
                                             );
                                           }
@@ -952,7 +1029,7 @@ class _MyRoomScreenState extends State<MyRoomScreen> {
                                             _buildRewardWidget(
                                               reward,
                                               size: 48,
-                                              count: count,
+                                              badgeCount: entry.badgeCount,
                                             ),
                                             const SizedBox(height: 4),
                                             SizedBox(

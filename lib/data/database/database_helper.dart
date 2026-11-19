@@ -24,7 +24,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 16,
+      version: 17,
       onCreate: (db, version) async {
         await _createDB(db, version);
         await _seedDatabase(db);
@@ -62,30 +62,14 @@ class DatabaseHelper {
           await db.execute('ALTER TABLE tasks ADD COLUMN audio_path TEXT;');
           await db.execute('ALTER TABLE aac_cards ADD COLUMN audio_path TEXT;');
         }
-        if (oldVersion < 12) {
-          await db.delete('subtasks');
-          await db.delete('daily_schedules');
-          await db.delete('tasks');
-          await _seedDatabase(db);
-        }
-        if (oldVersion < 13) {
-          await db.delete('aac_cards');
-          await _seedAacCards(db);
-        }
-        if (oldVersion < 14) {
-          await db.delete('subtasks');
-          await db.delete('daily_schedules');
-          await db.delete('tasks');
-          await _seedDatabase(db);
-          await db.delete('aac_cards');
-          await _seedAacCards(db);
-        }
         if (oldVersion < 16) {
           try {
             await db.execute(
               'ALTER TABLE subtasks ADD COLUMN audio_path TEXT;',
             );
           } catch (_) {}
+        }
+        if (oldVersion < 17) {
           await db.delete('subtasks');
           await db.delete('daily_schedules');
           await db.delete('tasks');
@@ -170,14 +154,14 @@ class DatabaseHelper {
 
     final defaultRewards = [
       {
-        'title': 'Fagylaltozás / Finomság',
+        'title': 'Fagylalt / Finomság',
         'points_cost': 3,
         'image_type': 'DEFAULT_ICON',
         'image_path': 'icecream',
         'is_redeemed': 0,
       },
       {
-        'title': '30 perc kedvenc mese',
+        'title': '30 perc mese',
         'points_cost': 5,
         'image_type': 'DEFAULT_ICON',
         'image_path': 'tv',
@@ -191,7 +175,7 @@ class DatabaseHelper {
         'is_redeemed': 0,
       },
       {
-        'title': 'Közös játék a szülővel',
+        'title': 'Közös játék',
         'points_cost': 4,
         'image_type': 'DEFAULT_ICON',
         'image_path': 'toys',
@@ -251,9 +235,9 @@ class DatabaseHelper {
 
     // 1. Ébredés
     final tEbredes = await addTask(
-      'Jó reggelt, ébredés!',
-      'bed',
-      'Jó reggelt! Ébredj vidáman, és húzd fel szépen a takarót az ágyadon!',
+      'Ébredés',
+      'assets/images/tasks/ebredes.png',
+      'Jó reggelt! Ébredj fel!',
       'assets/audio/tasks/jo_reggelt.mp3',
       5,
       1,
@@ -263,22 +247,22 @@ class DatabaseHelper {
       tEbredes,
       1,
       'Kelj ki az ágyból!',
-      'bed',
+      'assets/images/tasks/kelj_ki.png',
       'assets/audio/tasks/kelj_ki.mp3',
     );
     await addSubtask(
       tEbredes,
       2,
-      'Húzd fel és simítsd el a takarót!',
-      'bed',
+      'Húzd fel a takarót!',
+      'assets/images/tasks/takaro.png',
       'assets/audio/tasks/takaro.mp3',
     );
 
     // 2. Reggeli
     final tReggeli = await addTask(
-      'Finom reggeli',
-      'restaurant',
-      'Itt a reggeli ideje! Egyél finomat, hogy tele legyél energiával!',
+      'Reggeli',
+      'assets/images/tasks/reggeli.png',
+      'Itt a reggeli!',
       'assets/audio/tasks/reggeli.mp3',
       15,
       1,
@@ -287,30 +271,30 @@ class DatabaseHelper {
     await addSubtask(
       tReggeli,
       1,
-      'Ülj le a helyedre az asztalhoz!',
-      'restaurant',
+      'Ülj az asztalhoz!',
+      'assets/images/tasks/ulj_le.png',
       'assets/audio/tasks/ulj_le.mp3',
     );
     await addSubtask(
       tReggeli,
       2,
-      'Edd meg a reggelit, és igyál egy kis vizet!',
-      'restaurant',
+      'Edd meg a reggelit!',
+      'assets/images/tasks/edd_meg.png',
       'assets/audio/tasks/edd_meg.mp3',
     );
     await addSubtask(
       tReggeli,
       3,
-      'Vidd a tányért és a poharat a mosogatóba!',
-      'restaurant',
+      'Vidd a tányért a mosogatóba!',
+      'assets/images/tasks/vidd.png',
       'assets/audio/tasks/vidd.mp3',
     );
 
     // 3. Fogmosás
     final tFogmosas = await addTask(
-      'Alapos fogmosás',
-      'toothbrush',
-      'Itt a fogmosás ideje! Mossuk meg a fogacskákat szép tisztára!',
+      'Fogmosás',
+      'assets/images/tasks/fogmosas.png',
+      'Moss fogat!',
       'assets/audio/tasks/fogmosas.mp3',
       3,
       2,
@@ -319,30 +303,30 @@ class DatabaseHelper {
     await addSubtask(
       tFogmosas,
       1,
-      'Tegyél egy kevés fogkrémet a kefére!',
-      'toothbrush',
+      'Tegyél fogkrémet a kefére!',
+      'assets/images/tasks/fogkrem.png',
       'assets/audio/tasks/fogkrem.mp3',
     );
     await addSubtask(
       tFogmosas,
       2,
-      'Mosd meg a fogaidat elöl, hátul és rágófelületen is!',
-      'toothbrush',
+      'Mosd meg a fogaidat!',
+      'assets/images/tasks/mosd_meg.png',
       'assets/audio/tasks/mosd_meg.mp3',
     );
     await addSubtask(
       tFogmosas,
       3,
-      'Öblítsd ki a szádat vízzel, és mosd el a kefét!',
-      'toothbrush',
+      'Öblítsd ki a szád!',
+      'assets/images/tasks/oblites.png',
       'assets/audio/tasks/oblites.mp3',
     );
 
     // 4. Öltözködés
     final tOltozes = await addTask(
       'Öltözködés',
-      'checkroom',
-      'Vedd fel a tiszta ruháidat szép sorban!',
+      'assets/images/tasks/oltozkodes.png',
+      'Vedd fel a ruháidat!',
       'assets/audio/tasks/vedd_fel.mp3',
       10,
       2,
@@ -351,23 +335,23 @@ class DatabaseHelper {
     await addSubtask(
       tOltozes,
       1,
-      'Vedd fel a fehérneműt és a pólót!',
-      'checkroom',
+      'Vedd fel a pólót!',
+      'assets/images/tasks/polo.png',
       'assets/audio/tasks/polo.mp3',
     );
     await addSubtask(
       tOltozes,
       2,
-      'Bújj bele a nadrágba, és húzd fel a zoknit!',
-      'checkroom',
+      'Vedd fel a nadrágot és zoknit!',
+      'assets/images/tasks/zokni.png',
       'assets/audio/tasks/zokni.mp3',
     );
 
     // 5. Cipő és kabát
     final tKabatCipo = await addTask(
-      'Cipő és kabát felvétele',
-      'checkroom',
-      'Készüljünk az indulásra! Húzd fel a cipődet és a kabátodat!',
+      'Cipő és kabát',
+      'assets/images/tasks/cipo_kabat.png',
+      'Vedd fel a cipőt és kabátot!',
       'assets/audio/tasks/indulasra_keszulodes.mp3',
       5,
       1,
@@ -376,23 +360,23 @@ class DatabaseHelper {
     await addSubtask(
       tKabatCipo,
       1,
-      'Bújj bele a cipődbe, és rögzítsd a tépőzárat vagy fűzőt!',
-      'checkroom',
+      'Vedd fel a cipőd!',
+      'assets/images/tasks/bujj_bele.png',
       'assets/audio/tasks/bujj_bele.mp3',
     );
     await addSubtask(
       tKabatCipo,
       2,
-      'Vedd fel a kabátodat, és húzd fel a cipzárt!',
-      'checkroom',
+      'Vedd fel a kabátod!',
+      'assets/images/tasks/kabat.png',
       'assets/audio/tasks/kabat.mp3',
     );
 
     // 6. Indulás
     final tIndulas = await addTask(
-      'Indulás suliba / oviba',
-      'door_front_door',
-      'Ideje elindulni! Nézd meg, hogy nálad van-e a táskád!',
+      'Indulás',
+      'assets/images/tasks/indulas.png',
+      'Indulunk!',
       'assets/audio/tasks/indulas.mp3',
       10,
       2,
@@ -401,23 +385,23 @@ class DatabaseHelper {
     await addSubtask(
       tIndulas,
       1,
-      'Vedd fel a hátizsákodat a válladra!',
-      'door_front_door',
+      'Vedd fel a hátizsákot!',
+      'assets/images/tasks/vedd_fel_hatizsak.png',
       'assets/audio/tasks/vedd_fel_hatizsak.mp3',
     );
     await addSubtask(
       tIndulas,
       2,
-      'Lépjünk ki az ajtón, indulhatunk!',
-      'door_front_door',
+      'Lépjünk ki az ajtón!',
+      'assets/images/tasks/lepjunk_ki.png',
       'assets/audio/tasks/lepjunk_ki.mp3',
     );
 
     // 7. Ebéd
     final tEbedKezmosas = await addTask(
-      'Kézmosás és finom ebéd',
-      'restaurant',
-      'Moss alaposan kezet szappannal, és üljünk le ebédelni!',
+      'Kézmosás és ebéd',
+      'assets/images/tasks/ebed.png',
+      'Moss kezet és ebédelj!',
       'assets/audio/tasks/ebed.mp3',
       20,
       2,
@@ -426,23 +410,23 @@ class DatabaseHelper {
     await addSubtask(
       tEbedKezmosas,
       1,
-      'Moss kezet alaposan szappannal és vízzel!',
-      'restaurant',
+      'Moss kezet!',
+      'assets/images/tasks/moss_kezet.png',
       'assets/audio/tasks/moss_kezet.mp3',
     );
     await addSubtask(
       tEbedKezmosas,
       2,
-      'Egyél finomat a tányérodbból az evőeszközzel!',
-      'restaurant',
+      'Edd meg az ebédet!',
+      'assets/images/tasks/egyel_finomat.png',
       'assets/audio/tasks/egyel_finomat.mp3',
     );
 
     // 8. Játék és pihenés
     final tSzabadjatek = await addTask(
       'Játék és pihenés',
-      'sports_esports',
-      'Itt a játék ideje! Pihenj, és játssz a kedvenc játékaiddal!',
+      'assets/images/tasks/jatek.png',
+      'Játékidő!',
       'assets/audio/tasks/itt_a_jatek_ideje.mp3',
       30,
       1,
@@ -451,23 +435,23 @@ class DatabaseHelper {
     await addSubtask(
       tSzabadjatek,
       1,
-      'Válaszd ki, mivel szeretnél játszani!',
-      'sports_esports',
+      'Válassz játékot!',
+      'assets/images/tasks/valaszd_ki.png',
       'assets/audio/tasks/valaszd_ki.mp3',
     );
     await addSubtask(
       tSzabadjatek,
       2,
-      'Játssz nyugodtan, érezd jól magad!',
-      'sports_esports',
+      'Játssz nyugodtan!',
+      'assets/images/tasks/jatsz_nyugodtan.png',
       'assets/audio/tasks/jatsz_nyugodtan.mp3',
     );
 
     // 9. Lecke
     final tHazi = await addTask(
       'Lecke és gyakorlás',
-      'menu_book',
-      'Ülj le az asztalhoz, és csináljuk meg a mai feladatokat!',
+      'assets/images/tasks/lecke.png',
+      'Tanuljunk!',
       'assets/audio/tasks/csinaljuk_meg.mp3',
       25,
       3,
@@ -476,23 +460,23 @@ class DatabaseHelper {
     await addSubtask(
       tHazi,
       1,
-      'Készítsd ki a füzetet, a könyvet és a tolltartót!',
-      'menu_book',
+      'Készítsd ki a füzetet!',
+      'assets/images/tasks/keszitsd_ki.png',
       'assets/audio/tasks/keszitsd_ki.mp3',
     );
     await addSubtask(
       tHazi,
       2,
-      'Oldd meg a feladatokat szépen, figyelmesen!',
-      'menu_book',
+      'Oldd meg a feladatot!',
+      'assets/images/tasks/oldd_meg.png',
       'assets/audio/tasks/oldd_meg.mp3',
     );
 
     // 10. Rendrakás
     final tElpakolas = await addTask(
-      'Rendrakás a szobában',
-      'inventory_2',
-      'Tegyük el a játékokat, hogy szép rend legyen a szobádban!',
+      'Rendrakás',
+      'assets/images/tasks/rendrakas.png',
+      'Pakoljunk el!',
       'assets/audio/tasks/tegyuk_el.mp3',
       10,
       2,
@@ -501,23 +485,23 @@ class DatabaseHelper {
     await addSubtask(
       tElpakolas,
       1,
-      'Szedd össze a játékokat a szőnyegről és a földről!',
-      'inventory_2',
+      'Szedd össze a játékokat!',
+      'assets/images/tasks/szedd_ossze.png',
       'assets/audio/tasks/szedd_ossze.mp3',
     );
     await addSubtask(
       tElpakolas,
       2,
-      'Tedd vissza őket a dobozba vagy polcra!',
-      'inventory_2',
+      'Tedd vissza a helyére!',
+      'assets/images/tasks/tedd_vissza.png',
       'assets/audio/tasks/tedd_vissza.mp3',
     );
 
     // 11. Vacsora
     final tVacsora = await addTask(
-      'Közös vacsora',
-      'restaurant',
-      'Itt az ideje a vacsorának! Jó étvágyat!',
+      'Vacsora',
+      'assets/images/tasks/vacsora.png',
+      'Itt a vacsora! Jó étvágyat!',
       'assets/audio/tasks/itt_az_ideje_a_vacsoranak.mp3',
       20,
       1,
@@ -526,23 +510,23 @@ class DatabaseHelper {
     await addSubtask(
       tVacsora,
       1,
-      'Moss alaposan kezet a vacsora előtt!',
-      'restaurant',
+      'Moss kezet!',
+      'assets/images/tasks/moss_kezet_vacsora.png',
       'assets/audio/tasks/moss_kezet_vacsora.mp3',
     );
     await addSubtask(
       tVacsora,
       2,
-      'Egyél finom vacsorát az asztalnál!',
-      'restaurant',
+      'Edd meg a vacsorát!',
+      'assets/images/tasks/egyel_vacsora.png',
       'assets/audio/tasks/egyel_vacsora.mp3',
     );
 
     // 12. Fürdés
     final tFurdes = await addTask(
       'Esti fürdés',
-      'bathtub',
-      'Irány a fürdőszoba egy kellemes, meleg fürdésre!',
+      'assets/images/tasks/furdes.png',
+      'Irány fürdeni!',
       'assets/audio/tasks/furdes.mp3',
       15,
       2,
@@ -551,30 +535,30 @@ class DatabaseHelper {
     await addSubtask(
       tFurdes,
       1,
-      'Pancsolj és mosakodj meg alaposan a meleg vízben!',
-      'bathtub',
+      'Mosakodj meg!',
+      'assets/images/tasks/mosakodj.png',
       'assets/audio/tasks/mosakodj.mp3',
     );
     await addSubtask(
       tFurdes,
       2,
-      'Törölközz meg szárazra, és bújj bele a pizsamádba!',
-      'checkroom',
+      'Törölközz meg és öltözz fel!',
+      'assets/images/tasks/torolkozz.png',
       'assets/audio/tasks/torolkozz.mp3',
     );
     await addSubtask(
       tFurdes,
       3,
-      'Mosd meg a fogadat lefekvés előtt!',
-      'toothbrush',
+      'Moss fogat!',
+      'assets/images/tasks/mosd_meg_a_fogad_esti.png',
       'assets/audio/tasks/mosd_meg_a_fogad_esti.mp3',
     );
 
     // 13. Mese és alvás
     final tLefekves = await addTask(
-      'Esti mese és alvás',
-      'bed',
-      'Bújj be a puha ágyba, hallgasd meg a mesét, és aludj jól! Szép álmokat!',
+      'Mese és alvás',
+      'assets/images/tasks/alvas.png',
+      'Bújj ágyba! Jó éjt!',
       'assets/audio/tasks/joejt.mp3',
       20,
       2,
@@ -583,15 +567,15 @@ class DatabaseHelper {
     await addSubtask(
       tLefekves,
       1,
-      'Bújj be a puha takaró alá az ágyban!',
-      'bed',
+      'Takarózz be!',
+      'assets/images/tasks/takaro_esti.png',
       'assets/audio/tasks/takaro_esti.mp3',
     );
     await addSubtask(
       tLefekves,
       2,
-      'Hallgasd meg a mesét, hunyd le a szemed, és pihenj!',
-      'bed',
+      'Hallgasd a mesét és aludj!',
+      'assets/images/tasks/hallgasd.png',
       'assets/audio/tasks/hallgasd.mp3',
     );
 
@@ -725,10 +709,7 @@ class DatabaseHelper {
 
   Future<List<RewardModel>> getAllRewards() async {
     final db = await instance.database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      'rewards',
-      orderBy: 'points_cost ASC',
-    );
+    final maps = await db.query('rewards', orderBy: 'points_cost ASC');
     return maps.map((map) => RewardModel.fromMap(map)).toList();
   }
 
@@ -790,11 +771,11 @@ class DatabaseHelper {
 
     if (count != null && count > 0) return;
 
-    final List<Map<String, dynamic>> defaultCards = [
-      // 1. Szükségletek (NEEDS)
+    final defaultCards = [
+      // 1. Szükségletek (NEEDS) – rövid, baráti szövegekkel
       {
-        'title': 'Inni szeretnék',
-        'speech_text': 'Szomjas vagyok, kérek egy kis vizet!',
+        'title': 'Vizet kérek',
+        'speech_text': 'Vizet kérek!',
         'category': 'NEEDS',
         'image_type': 'DEFAULT_ICON',
         'image_path': 'water_drop',
@@ -802,15 +783,15 @@ class DatabaseHelper {
       },
       {
         'title': 'Enni szeretnék',
-        'speech_text': 'Éhes vagyok, szeretnék enni valamit!',
+        'speech_text': 'Enni szeretnék!',
         'category': 'NEEDS',
         'image_type': 'DEFAULT_ICON',
         'image_path': 'restaurant',
         'audio_path': 'assets/audio/aac/ehes_vagyok.mp3',
       },
       {
-        'title': 'Mosdóba kell mennem',
-        'speech_text': 'Ki kell mennem a mosdóba, segíts kérlek!',
+        'title': 'Mosdóba megyek',
+        'speech_text': 'Mosdóba kell mennem!',
         'category': 'NEEDS',
         'image_type': 'DEFAULT_ICON',
         'image_path': 'wc',
@@ -818,7 +799,7 @@ class DatabaseHelper {
       },
       {
         'title': 'Segíts nekem!',
-        'speech_text': 'Nem tudom egyedül megcsinálni, kérlek segíts!',
+        'speech_text': 'Segíts kérlek!',
         'category': 'NEEDS',
         'image_type': 'DEFAULT_ICON',
         'image_path': 'front_hand',
@@ -826,7 +807,7 @@ class DatabaseHelper {
       },
       {
         'title': 'Pihenni szeretnék',
-        'speech_text': 'Elfáradtam, szeretnék egy kicsit pihenni.',
+        'speech_text': 'Elfáradtam, pihenek.',
         'category': 'NEEDS',
         'image_type': 'DEFAULT_ICON',
         'image_path': 'bed',
@@ -834,7 +815,7 @@ class DatabaseHelper {
       },
       {
         'title': 'Nem kérem / Állj!',
-        'speech_text': 'Ezt most nem szeretném, kérlek álljunk meg!',
+        'speech_text': 'Nem kérem, állj!',
         'category': 'NEEDS',
         'image_type': 'DEFAULT_ICON',
         'image_path': 'pan_tool_rounded',
@@ -844,7 +825,7 @@ class DatabaseHelper {
       // 2. Érzések (FEELINGS)
       {
         'title': 'Vidám vagyok',
-        'speech_text': 'Jól érzem magam, most nagyon vidám vagyok!',
+        'speech_text': 'Vidám vagyok!',
         'category': 'FEELINGS',
         'image_type': 'DEFAULT_ICON',
         'image_path': 'sentiment_satisfied',
@@ -852,15 +833,15 @@ class DatabaseHelper {
       },
       {
         'title': 'Fáj valamim',
-        'speech_text': 'Fáj valahol, nézd meg kérlek!',
+        'speech_text': 'Fáj valahol!',
         'category': 'FEELINGS',
         'image_type': 'DEFAULT_ICON',
         'image_path': 'healing',
         'audio_path': 'assets/audio/aac/faj_valahol.mp3',
       },
       {
-        'title': 'Túl nagy a zaj',
-        'speech_text': 'Túl hangos minden, bántja a fülem a zaj!',
+        'title': 'Túl hangos',
+        'speech_text': 'Túl nagy a zaj!',
         'category': 'FEELINGS',
         'image_type': 'DEFAULT_ICON',
         'image_path': 'volume_off',
@@ -868,7 +849,7 @@ class DatabaseHelper {
       },
       {
         'title': 'Szomorú vagyok',
-        'speech_text': 'Most szomorú vagyok, szükségem van egy kis csendre.',
+        'speech_text': 'Szomorú vagyok.',
         'category': 'FEELINGS',
         'image_type': 'DEFAULT_ICON',
         'image_path': 'sentiment_dissatisfied',
@@ -876,7 +857,7 @@ class DatabaseHelper {
       },
       {
         'title': 'Ölelj meg!',
-        'speech_text': 'Szeretnék egy nagy ölelést!',
+        'speech_text': 'Kérek egy ölelést!',
         'category': 'FEELINGS',
         'image_type': 'DEFAULT_ICON',
         'image_path': 'favorite_rounded',
@@ -885,24 +866,24 @@ class DatabaseHelper {
 
       // 3. Tevékenységek (ACTIVITIES)
       {
-        'title': 'Játsszunk együtt!',
-        'speech_text': 'Szeretnék játszani valami jót!',
+        'title': 'Játsszunk!',
+        'speech_text': 'Játsszunk együtt!',
         'category': 'ACTIVITIES',
         'image_type': 'DEFAULT_ICON',
         'image_path': 'sports_esports',
         'audio_path': 'assets/audio/aac/jatszani_szeretnek.mp3',
       },
       {
-        'title': 'Mesét szeretnék nézni',
-        'speech_text': 'Nézhetünk egy mesét, kérlek?',
+        'title': 'Mesét kérek',
+        'speech_text': 'Nézzünk mesét!',
         'category': 'ACTIVITIES',
         'image_type': 'DEFAULT_ICON',
         'image_path': 'tv',
         'audio_path': 'assets/audio/aac/meset_szeretnek_nezni.mp3',
       },
       {
-        'title': 'Sétáljunk egyet!',
-        'speech_text': 'Menjünk ki a szabadba sétálni!',
+        'title': 'Sétáljunk!',
+        'speech_text': 'Menjünk sétálni!',
         'category': 'ACTIVITIES',
         'image_type': 'DEFAULT_ICON',
         'image_path': 'directions_walk',
@@ -931,18 +912,14 @@ class DatabaseHelper {
     return await db.delete('aac_cards', where: 'id = ?', whereArgs: [id]);
   }
 
-  /// Gyári alapértelmezett állapot visszaállítása:
-  /// Újraépíti a napirendet, a mikrolépéseket és a Beszélő Kártyákat
   Future<void> resetToDefaults() async {
     final db = await instance.database;
 
-    // 1. Meglévő rekordok törlése
     await db.delete('subtasks');
     await db.delete('daily_schedules');
     await db.delete('tasks');
     await db.delete('aac_cards');
 
-    // 2. Gyári alapértékek újratöltése a Database példánnyal
     await _seedDatabase(db);
     await _seedAacCards(db);
   }

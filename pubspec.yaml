@@ -45,6 +45,8 @@ flutter:
 
   assets:
     - assets/images/
+    - assets/images/tasks/
+    - assets/images/routines/
     - assets/audio/tasks/
     - assets/audio/aac/
     - assets/audio/feedback/

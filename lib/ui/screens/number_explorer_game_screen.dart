@@ -90,7 +90,7 @@ class _NumberExplorerGameScreenState extends State<NumberExplorerGameScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_tabMode == GameTabMode.explore) {
         _speakText(
-          'Fedezd fel a számokat! Érints meg egy számot a táblán!',
+          'Érints meg egy számot!',
           audioPath: 'assets/audio/words/fedezd_fel_a_szamokat.mp3',
         );
       } else {
@@ -130,14 +130,14 @@ class _NumberExplorerGameScreenState extends State<NumberExplorerGameScreen> {
         _targetNumber = _random.nextInt(10) + 1;
         _pageOffset = 0;
         _speakText(
-          'Számold meg, hány ${_currentFruit.name} látsz a képen!',
+          'Hány ${_currentFruit.name} látsz?',
           audioPath: 'assets/audio/words/${_currentFruit.audioFile}',
         );
       } else if (_quizType == QuizTaskType.listenAndFind) {
         _targetNumber = _random.nextInt(_maxRange) + 1;
         _pageOffset = ((_targetNumber - 1) ~/ _pageSize) * _pageSize;
         _speakText(
-          'Keresd meg a(z) $_targetNumber számot a táblán!',
+          'Keresd meg: $_targetNumber!',
           audioPath: 'assets/audio/words/keresd_meg_ezt_a_szamot.mp3',
         );
       } else {
@@ -146,14 +146,14 @@ class _NumberExplorerGameScreenState extends State<NumberExplorerGameScreen> {
           _baseNeighborNumber = _random.nextInt(_maxRange - 2) + 1;
           _targetNumber = _baseNeighborNumber + 1;
           _speakText(
-            'Melyik szám jön a(z) $_baseNeighborNumber után?',
+            'Mi jön $_baseNeighborNumber után?',
             audioPath: 'assets/audio/words/melyik_szam_jon_ezutan.mp3',
           );
         } else {
           _baseNeighborNumber = _random.nextInt(_maxRange - 2) + 2;
           _targetNumber = _baseNeighborNumber - 1;
           _speakText(
-            'Melyik szám áll a(z) $_baseNeighborNumber előtt?',
+            'Mi áll $_baseNeighborNumber előtt?',
             audioPath: 'assets/audio/words/melyik_szam_all_ezelott.mp3',
           );
         }
@@ -199,8 +199,8 @@ class _NumberExplorerGameScreenState extends State<NumberExplorerGameScreen> {
         if (!mounted) return;
         GameSuccessDialog.show(
           context,
-          title: 'Eltaláltad a számot! 🎯',
-          message: 'A helyes szám: $number volt!\nNagyon ügyesen számoltál!',
+          title: 'Ügyes vagy! 🎯',
+          message: 'Ez a(z) $number!',
           earnedStar: earnedStar,
           audioPath: 'assets/audio/words/hurra_nagyon_ugyes_vagy.mp3',
           onNext: _generateQuizTask,
@@ -209,9 +209,7 @@ class _NumberExplorerGameScreenState extends State<NumberExplorerGameScreen> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'Próbáld meg újra! Számold át vagy keresd még egyszer!',
-          ),
+          content: Text('Próbáld újra!'),
           duration: Duration(seconds: 2),
           backgroundColor: Color(0xFF64748B),
         ),
@@ -614,7 +612,7 @@ class _NumberExplorerGameScreenState extends State<NumberExplorerGameScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Kiválasztott szám',
+                  'Szám:',
                   style: TextStyle(
                     fontSize: 12,
                     color: isDark
@@ -665,7 +663,7 @@ class _NumberExplorerGameScreenState extends State<NumberExplorerGameScreen> {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          'Gyakorold az írását! ✍️',
+                          'Írás gyakorlása ✍️',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
@@ -750,7 +748,7 @@ class _NumberExplorerGameScreenState extends State<NumberExplorerGameScreen> {
             ),
           ] else if (_quizType == QuizTaskType.listenAndFind) ...[
             Text(
-              'Keresd meg a táblán ezt a számot: $_targetNumber',
+              'Keresd meg: $_targetNumber',
               style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.bold,
@@ -762,8 +760,8 @@ class _NumberExplorerGameScreenState extends State<NumberExplorerGameScreen> {
           ] else ...[
             Text(
               _isNextNeighbor
-                  ? 'Melyik szám jön a(z) $_baseNeighborNumber után?'
-                  : 'Melyik szám áll a(z) $_baseNeighborNumber előtt?',
+                  ? 'Mi jön $_baseNeighborNumber után?'
+                  : 'Mi áll $_baseNeighborNumber előtt?',
               style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.bold,

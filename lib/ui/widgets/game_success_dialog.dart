@@ -23,7 +23,7 @@ class GameSuccessDialog extends StatefulWidget {
 
   static Future<void> show(
     BuildContext context, {
-    String title = 'Hurrá! Megcsináltad! 🎉',
+    String title = 'Ügyes vagy! 🎉',
     required String message,
     required bool earnedStar,
     required VoidCallback onNext,
@@ -77,7 +77,7 @@ class _GameSuccessDialogState extends State<GameSuccessDialog>
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       AudioService.instance.speakOrPlay(
-        text: 'Hurrá! Nagyon ügyes vagy, megcsináltad!',
+        text: 'Ügyes vagy!',
         audioPath:
             widget.audioPath ??
             'assets/audio/words/hurra_nagyon_ugyes_vagy.mp3',
@@ -105,14 +105,12 @@ class _GameSuccessDialogState extends State<GameSuccessDialog>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // ANIMÁLT KARAKTER FIGURA
             ScaleTransition(
               scale: _scaleAnimation,
               child: Stack(
                 alignment: Alignment.center,
                 clipBehavior: Clip.none,
                 children: [
-                  // Háttér fényudvar
                   Container(
                     width: 120,
                     height: 120,
@@ -142,8 +140,6 @@ class _GameSuccessDialogState extends State<GameSuccessDialog>
                       ],
                     ),
                   ),
-
-                  // Karakter fej & lájk kéz
                   Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -164,8 +160,6 @@ class _GameSuccessDialogState extends State<GameSuccessDialog>
                       ),
                     ],
                   ),
-
-                  // Környező csillagok
                   Positioned(
                     top: -6,
                     left: 2,
@@ -185,10 +179,7 @@ class _GameSuccessDialogState extends State<GameSuccessDialog>
                 ],
               ),
             ),
-
             const SizedBox(height: 18),
-
-            // CÍM
             Text(
               widget.title,
               textAlign: TextAlign.center,
@@ -204,10 +195,7 @@ class _GameSuccessDialogState extends State<GameSuccessDialog>
                           : const Color(0xFFDB2777)),
               ),
             ),
-
             const SizedBox(height: 8),
-
-            // ÜZENET & CSILLAG VISSZAJELZÉS
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
@@ -262,7 +250,7 @@ class _GameSuccessDialogState extends State<GameSuccessDialog>
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            '+1 Csillag jutalom! ⭐',
+                            '+1 ⭐',
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.bold,
@@ -278,10 +266,7 @@ class _GameSuccessDialogState extends State<GameSuccessDialog>
                 ],
               ),
             ),
-
             const SizedBox(height: 20),
-
-            // TOVÁBB GOMB
             SizedBox(
               width: double.infinity,
               height: 50,
@@ -298,7 +283,7 @@ class _GameSuccessDialogState extends State<GameSuccessDialog>
                   color: Colors.white,
                 ),
                 label: const Text(
-                  'Tovább a következőhöz ➔',
+                  'Tovább',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,

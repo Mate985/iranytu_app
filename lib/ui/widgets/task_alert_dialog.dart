@@ -73,7 +73,6 @@ class _TaskAlertDialogState extends State<TaskAlertDialog> {
   @override
   void initState() {
     super.initState();
-    // Csak akkor játszik le hangot automatikusan, ha a szülő nem tiltotta le
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final isSoundEnabled = await AppSettingsService.isAlertSoundEnabled();
       if (!isSoundEnabled || !mounted) return;
@@ -100,7 +99,6 @@ class _TaskAlertDialogState extends State<TaskAlertDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Időpont jelvény
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
               decoration: BoxDecoration(
@@ -128,8 +126,6 @@ class _TaskAlertDialogState extends State<TaskAlertDialog> {
               ),
             ),
             const SizedBox(height: 20),
-
-            // Nagy kerek ikon a feladathoz
             Container(
               width: 100,
               height: 100,
@@ -145,10 +141,8 @@ class _TaskAlertDialogState extends State<TaskAlertDialog> {
               ),
             ),
             const SizedBox(height: 18),
-
-            // Főcím
             const Text(
-              'Itt az ideje!',
+              'Most jön:',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -165,7 +159,6 @@ class _TaskAlertDialogState extends State<TaskAlertDialog> {
                 color: Color(0xFF0F172A),
               ),
             ),
-
             if (widget.task.ttsText.isNotEmpty) ...[
               const SizedBox(height: 10),
               Text(
@@ -178,10 +171,7 @@ class _TaskAlertDialogState extends State<TaskAlertDialog> {
                 ),
               ),
             ],
-
             const SizedBox(height: 16),
-
-            // Újrahallgatás gomb
             IconButton.filledTonal(
               style: IconButton.styleFrom(
                 backgroundColor: const Color(0xFFF1F5F9),
@@ -200,10 +190,7 @@ class _TaskAlertDialogState extends State<TaskAlertDialog> {
               ),
               tooltip: 'Újrahallgatás',
             ),
-
             const SizedBox(height: 24),
-
-            // Nagy zöld gomb: "Megcsinálom!"
             SizedBox(
               width: double.infinity,
               height: 52,
@@ -226,7 +213,7 @@ class _TaskAlertDialogState extends State<TaskAlertDialog> {
                     Icon(Icons.check_circle_rounded, size: 24),
                     SizedBox(width: 8),
                     Text(
-                      'Megcsinálom!',
+                      'Kész!',
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.bold,

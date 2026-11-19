@@ -27,32 +27,24 @@ class ScreenTimeService {
 
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-  // A 3 váltakozó, kedves üzenet
   final List<ScreenBreakMessage> _breakMessages = const [
     ScreenBreakMessage(
-      title: 'Irány a szabad levegő! 🌳⚽',
-      description:
-          'Már sokat ügyeskedtél ma a képernyő előtt. Ideje szaladgálni vagy labdázni egy jót a friss levegőn!',
-      speechText:
-          'Ideje egy kis szünetnek! Menj ki a szabadba szaladgálni vagy játszani egyet!',
+      title: 'Szünet idő! 🌳',
+      description: 'Menj ki a friss levegőre!',
+      speechText: 'Szünet idő! Menj ki a friss levegőre!',
     ),
     ScreenBreakMessage(
-      title: 'Pihentesd a szemedet! ☀️🍃',
-      description:
-          'A szemeidnek is kell egy kis pihenő! Szívj egy kis friss levegőt az udvaron, a teraszon vagy az ablaknál!',
-      speechText:
-          'A szemeidnek is kell egy kis pihenő! Szívj egy kis friss levegőt az udvaron vagy a teraszon!',
+      title: 'Szempihentető! ☀️',
+      description: 'Pihentesd a szemed egy kicsit!',
+      speechText: 'Pihentesd a szemed!',
     ),
     ScreenBreakMessage(
-      title: 'Frissítő szünet a szabadban! 🦋🌼',
-      description:
-          'Igyál egy finom pohár vizet vagy gyümölcslevet, és nézd meg, mi újság kint a természetben!',
-      speechText:
-          'Készíts magadnak egy finom innivalót, és nézd meg, mi újság kint a szabadban!',
+      title: 'Frissítő szünet! 💧',
+      description: 'Igyál egy kis vizet!',
+      speechText: 'Igyál egy kis vizet!',
     ),
   ];
 
-  /// Számláló elindítása
   void startMonitoring() {
     _timer?.cancel();
     _elapsedSeconds = 0;
@@ -61,7 +53,6 @@ class ScreenTimeService {
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) async {
       final limitMinutes = await AppSettingsService.getScreenTimeLimit();
 
-      // Ha a szülő kikapcsolta (0), leállítjuk a számlálást
       if (limitMinutes <= 0) {
         _elapsedSeconds = 0;
         return;
@@ -70,7 +61,6 @@ class ScreenTimeService {
       _elapsedSeconds++;
       final limitSeconds = limitMinutes * 60;
 
-      // Amikor eléri a limitet és még nem mutattuk a figyelmeztetést
       if (_elapsedSeconds >= limitSeconds && !_dialogShown) {
         _dialogShown = true;
         _showBreakDialog();
@@ -78,19 +68,16 @@ class ScreenTimeService {
     });
   }
 
-  /// Pihenő felugró ablak és rendszerértesítés megjelenítése
   void _showBreakDialog() {
     final currentMessage =
         _breakMessages[_messageIndex % _breakMessages.length];
     _messageIndex++;
 
-    // 1. Rendszerértesítés küldése az értesítési sávba
     NotificationService.instance.showInstantNotification(
       title: currentMessage.title,
       body: currentMessage.speechText,
     );
 
-    // 2. Felugró ablak megjelenítése az appban
     final context = navigatorKey.currentContext;
     if (context == null) return;
 
@@ -110,7 +97,6 @@ class ScreenTimeService {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Kedves illusztráció ikon
                   Container(
                     width: 72,
                     height: 72,
@@ -134,19 +120,17 @@ class ScreenTimeService {
                       color: Color(0xFF0F172A),
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                   Text(
                     currentMessage.description,
                     textAlign: TextAlign.center,
                     style: const TextStyle(
-                      fontSize: 14,
+                      fontSize: 15,
                       color: Color(0xFF64748B),
                       height: 1.4,
                     ),
                   ),
                   const SizedBox(height: 20),
-
-                  // Mesehang felolvasó gomb
                   ElevatedButton.icon(
                     onPressed: () {
                       TtsService.instance.speak(currentMessage.speechText);
@@ -156,7 +140,7 @@ class ScreenTimeService {
                       color: Colors.white,
                     ),
                     label: const Text(
-                      'Felolvasás mesés hangon ✨',
+                      'Felolvasás',
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -173,19 +157,16 @@ class ScreenTimeService {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 12),
-
-                  // Bezárás és időzítő újraindítása
+                  const SizedBox(height: 10),
                   TextButton(
                     onPressed: () {
                       TtsService.instance.stop();
                       Navigator.of(ctx).pop();
-                      // Újraindítjuk a ciklust a következő figyelmeztetésig
                       _elapsedSeconds = 0;
                       _dialogShown = false;
                     },
                     child: const Text(
-                      'Rendben, leteszem! 🌸',
+                      'Rendben',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,

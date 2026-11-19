@@ -37,7 +37,7 @@ class SessionTimeoutScreen extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               const Text(
-                'Mára elfáradtak a játékok!',
+                'Lejárt a játékidő.',
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
@@ -47,9 +47,9 @@ class SessionTimeoutScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               const Text(
-                'Nagyon ügyesen játszottál ma! Ideje pihentetni a szemedet, mozogni egy kicsit vagy inni egy finom vizet.',
+                'Pihentesd a szemed! Igyál egy kis vizet.',
                 style: TextStyle(
-                  fontSize: 15,
+                  fontSize: 16,
                   color: Color(0xFF334155),
                   height: 1.4,
                 ),
@@ -61,7 +61,7 @@ class SessionTimeoutScreen extends StatelessWidget {
                   foregroundColor: const Color(0xFF64748B),
                 ),
                 icon: const Icon(Icons.lock_outline_rounded, size: 18),
-                label: const Text('Szülői feloldás / Idő módosítása'),
+                label: const Text('Szülői feloldás'),
                 onPressed: () {
                   _showParentUnlockDialog(context);
                 },
@@ -100,9 +100,7 @@ class SessionTimeoutScreen extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'A folytatáshoz add meg a 4 számjegyű szülői PIN-kódot:',
-              ),
+              const Text('Add meg a 4 jegyű PIN-kódot:'),
               const SizedBox(height: 12),
               TextField(
                 controller: controller,
@@ -111,7 +109,7 @@ class SessionTimeoutScreen extends StatelessWidget {
                 maxLength: 4,
                 autofocus: true,
                 decoration: InputDecoration(
-                  hintText: 'PIN-kód (pl. 1234)',
+                  hintText: 'PIN-kód',
                   counterText: '',
                   errorText: errorText,
                   border: OutlineInputBorder(
@@ -140,7 +138,7 @@ class SessionTimeoutScreen extends StatelessWidget {
                   }
                 } else {
                   setDialogState(() {
-                    errorText = 'Helytelen PIN-kód!';
+                    errorText = 'Hibás PIN-kód!';
                   });
                 }
               },

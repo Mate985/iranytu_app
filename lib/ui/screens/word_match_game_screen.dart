@@ -226,9 +226,8 @@ class _WordMatchGameScreenState extends State<WordMatchGameScreen> {
 
       GameSuccessDialog.show(
         context,
-        title: 'Eltaláltad! Szuper munka! 🎉',
-        message:
-            'Pontosan ez a(z) "${_currentQuestion.word}"!\nNagyon ügyesen választottál!',
+        title: 'Ügyes vagy! 🎉',
+        message: 'Ez a(z) ${_currentQuestion.word}!',
         earnedStar: earnedStar,
         audioPath: 'assets/audio/words/hurra_nagyon_ugyes_vagy.mp3',
         onNext: _nextQuestion,
@@ -240,7 +239,7 @@ class _WordMatchGameScreenState extends State<WordMatchGameScreen> {
       );
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Semmi baj, nézd meg jól a többi szót is! 🌟'),
+          content: Text('Próbáld újra! 🌟'),
           duration: Duration(seconds: 2),
           backgroundColor: Color(0xFF64748B),
         ),
@@ -419,7 +418,7 @@ class _WordMatchGameScreenState extends State<WordMatchGameScreen> {
               ),
               const SizedBox(height: 16),
               Text(
-                'Mi látható a fenti képen? Érintsd meg a nevét!',
+                'Mi van a képen? Érintsd meg!',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 16,

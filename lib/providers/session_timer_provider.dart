@@ -185,9 +185,8 @@ class SessionTimerProvider extends ChangeNotifier with WidgetsBindingObserver {
 
       await _notifPlugin.show(
         id: 9901,
-        title: 'Lejárt a képernyőidő! ⏳',
-        body:
-            'Ideje egy kicsit pihentetni a szemedet! Kérd meg a szülőt, ha szeretnél még játszani.',
+        title: 'Lejárt a játékidő! ⏳',
+        body: 'Pihentesd a szemed! Szólj a szülőnek.',
         notificationDetails: details,
       );
     } catch (_) {}

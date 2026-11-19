@@ -19,34 +19,33 @@ class DatabaseService {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
 
-    // Verziót 2-re emeljük, hogy ha létezik a régi db, hozzáadja az audio_path oszlopot
     return await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
   }
 
   Future<void> _createDB(Database db, int version) async {
-    // 1. Rutinok táblája
     await db.execute('''
       CREATE TABLE routines (
         id TEXT PRIMARY KEY,
         title TEXT NOT NULL,
         description TEXT NOT NULL,
         iconCodePoint INTEGER NOT NULL,
+        image_path TEXT,
         colorValue INTEGER NOT NULL
       )
     ''');
 
-    // 2. Lépések táblája
     await db.execute('''
       CREATE TABLE routine_steps (
         id TEXT PRIMARY KEY,
         routineId TEXT NOT NULL,
         title TEXT NOT NULL,
         iconCodePoint INTEGER NOT NULL,
+        image_path TEXT,
         isCompleted INTEGER NOT NULL,
         sortOrder INTEGER NOT NULL,
         audio_path TEXT,
@@ -54,14 +53,29 @@ class DatabaseService {
       )
     ''');
 
-    // Alapértelmezett mintaadatok betöltése az adatbázis első indulásakor
     await _seedInitialData(db);
   }
 
   Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
-      // Ha már létezett az adatbázis v1-gyel, hozzáadjuk az oszlopot hiba nélkül
-      await db.execute('ALTER TABLE routine_steps ADD COLUMN audio_path TEXT;');
+      try {
+        await db.execute(
+          'ALTER TABLE routine_steps ADD COLUMN audio_path TEXT;',
+        );
+      } catch (_) {}
+    }
+    if (oldVersion < 3) {
+      try {
+        await db.execute('ALTER TABLE routines ADD COLUMN image_path TEXT;');
+      } catch (_) {}
+      try {
+        await db.execute(
+          'ALTER TABLE routine_steps ADD COLUMN image_path TEXT;',
+        );
+      } catch (_) {}
+      await db.delete('routine_steps');
+      await db.delete('routines');
+      await _seedInitialData(db);
     }
   }
 
@@ -72,6 +86,7 @@ class DatabaseService {
         'title': routine.title,
         'description': routine.description,
         'iconCodePoint': routine.icon.codePoint,
+        'image_path': routine.imagePath,
         'colorValue': routine.themeColor.toARGB32(),
       });
 
@@ -82,6 +97,7 @@ class DatabaseService {
           'routineId': routine.id,
           'title': step.title,
           'iconCodePoint': step.icon.codePoint,
+          'image_path': step.imagePath,
           'isCompleted': step.isCompleted ? 1 : 0,
           'sortOrder': i,
           'audio_path': step.audioPath,
@@ -90,15 +106,11 @@ class DatabaseService {
     }
   }
 
-  // Segédfüggvény a dinamikus ikonok betöltéséhez
   IconData _buildIcon(int codePoint) {
     // ignore: non_const_argument_for_const_parameter
     return IconData(codePoint, fontFamily: 'MaterialIcons');
   }
 
-  // --- LEKÉRDEZÉSEK ÉS MÓDOSÍTÁSOK ---
-
-  // Összes rutin betöltése a hozzájuk tartozó lépésekkel
   Future<List<Routine>> getRoutines() async {
     final db = await database;
     final routineMaps = await db.query('routines');
@@ -120,8 +132,9 @@ class DatabaseService {
           id: sMap['id'] as String,
           title: sMap['title'] as String,
           icon: _buildIcon(iconCode),
+          imagePath: sMap['image_path'] as String?,
           isCompleted: (sMap['isCompleted'] as int) == 1,
-          audioPath: sMap['audio_path'] as String?, // <-- KIOLVASÁS
+          audioPath: sMap['audio_path'] as String?,
         );
       }).toList();
 
@@ -132,6 +145,7 @@ class DatabaseService {
           title: rMap['title'] as String,
           description: rMap['description'] as String,
           icon: _buildIcon(routineIconCode),
+          imagePath: rMap['image_path'] as String?,
           themeColor: Color((rMap['colorValue'] as num).toInt()),
           steps: steps,
         ),
@@ -141,7 +155,6 @@ class DatabaseService {
     return routines;
   }
 
-  // Lépés állapotának frissítése (pipálás)
   Future<void> updateStepStatus(String stepId, bool isCompleted) async {
     final db = await database;
     await db.update(
@@ -152,7 +165,6 @@ class DatabaseService {
     );
   }
 
-  // Rutin lépéseinek visszaállítása alaphelyzetbe (újrakezdés gombhoz)
   Future<void> resetRoutineSteps(String routineId) async {
     final db = await database;
     await db.update(
@@ -163,7 +175,6 @@ class DatabaseService {
     );
   }
 
-  // Új rutin hozzáadása lépésekkel együtt (Szülői funkció)
   Future<void> addRoutine(Routine routine) async {
     final db = await database;
     await db.transaction((txn) async {
@@ -172,6 +183,7 @@ class DatabaseService {
         'title': routine.title,
         'description': routine.description,
         'iconCodePoint': routine.icon.codePoint,
+        'image_path': routine.imagePath,
         'colorValue': routine.themeColor.toARGB32(),
       });
 
@@ -182,15 +194,15 @@ class DatabaseService {
           'routineId': routine.id,
           'title': step.title,
           'iconCodePoint': step.icon.codePoint,
+          'image_path': step.imagePath,
           'isCompleted': 0,
           'sortOrder': i,
-          'audio_path': step.audioPath, // <-- MENTÉS AZ ÚJ RUTINOKHOZ!
+          'audio_path': step.audioPath,
         });
       }
     });
   }
 
-  // Rutin törlése (CASCADE miatt a lépései is törlődnek)
   Future<void> deleteRoutine(String routineId) async {
     final db = await database;
     await db.delete('routines', where: 'id = ?', whereArgs: [routineId]);
@@ -201,7 +213,6 @@ class DatabaseService {
     );
   }
 
-  // Rutin és lépéseinek frissítése (Szülői szerkesztés)
   Future<void> updateRoutine(Routine routine) async {
     final db = await database;
     await db.transaction((txn) async {
@@ -211,6 +222,7 @@ class DatabaseService {
           'title': routine.title,
           'description': routine.description,
           'iconCodePoint': routine.icon.codePoint,
+          'image_path': routine.imagePath,
           'colorValue': routine.themeColor.toARGB32(),
         },
         where: 'id = ?',
@@ -230,9 +242,10 @@ class DatabaseService {
           'routineId': routine.id,
           'title': step.title,
           'iconCodePoint': step.icon.codePoint,
+          'image_path': step.imagePath,
           'isCompleted': step.isCompleted ? 1 : 0,
           'sortOrder': i,
-          'audio_path': step.audioPath, // <-- MENTÉS SZERKESZTÉSKOR
+          'audio_path': step.audioPath,
         });
       }
     });

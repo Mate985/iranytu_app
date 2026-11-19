@@ -217,13 +217,6 @@ class _WordBuilderGameScreenState extends State<WordBuilderGameScreen> {
 
     if (nextTargetIndex < _targetWord.length &&
         _targetWord[nextTargetIndex] == tappedLetter) {
-      final letterAudio =
-          'assets/audio/words/${tappedLetter.toLowerCase()}.mp3';
-      AudioService.instance.speakOrPlay(
-        text: tappedLetter,
-        audioPath: letterAudio,
-      );
-
       setState(() {
         _letterUsed[index] = true;
         _placedLetterIndices.add(index);
@@ -234,25 +227,22 @@ class _WordBuilderGameScreenState extends State<WordBuilderGameScreen> {
           _isTransitioning = true;
         });
 
-        Future.delayed(const Duration(milliseconds: 2200), () {
-          if (!mounted) return;
-          _speakWord();
+        _speakWord();
 
-          Future.delayed(const Duration(milliseconds: 2200), () {
-            if (mounted) {
-              _onWordCompleted();
-            }
-          });
+        Future.delayed(const Duration(milliseconds: 1800), () {
+          if (mounted) {
+            _onWordCompleted();
+          }
         });
       }
     } else {
       AudioService.instance.speakOrPlay(
-        text: 'Majdnem! Keresd a következő betűt!',
+        text: 'Másik betű!',
         audioPath: 'assets/audio/words/majdnem_keresd_a_kovetkezo_betut.mp3',
       );
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Majdnem! Keresd a következő betűt! 🌟'),
+          content: Text('Másik betűt válassz!'),
           duration: Duration(seconds: 1),
           backgroundColor: Color(0xFF64748B),
         ),
@@ -288,8 +278,8 @@ class _WordBuilderGameScreenState extends State<WordBuilderGameScreen> {
 
     GameSuccessDialog.show(
       context,
-      title: 'Nagyon szuper vagy! 🔤',
-      message: 'Sikeresen kiraktad a szót: $_targetWord!',
+      title: 'Ügyes vagy! 🔤',
+      message: 'Kész a szó: $_targetWord!',
       earnedStar: earnedStar,
       audioPath: 'assets/audio/words/hurra_nagyon_ugyes_vagy.mp3',
       onNext: () {
@@ -447,7 +437,7 @@ class _WordBuilderGameScreenState extends State<WordBuilderGameScreen> {
                                 color: Color(0xFF16A34A),
                                 size: 28,
                               ),
-                              tooltip: 'Szó meghallgatása',
+                              tooltip: 'Meghallgatás',
                               onPressed: _speakWord,
                             ),
                           ],
@@ -580,7 +570,7 @@ class _WordBuilderGameScreenState extends State<WordBuilderGameScreen> {
                 child: Column(
                   children: [
                     Text(
-                      'Rakd ki a szót! Érintsd meg a betűket sorban:',
+                      'Rakd ki a szót!',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,

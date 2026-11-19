@@ -73,8 +73,6 @@ class MemoryGameScreen extends StatefulWidget {
 class _MemoryGameScreenState extends State<MemoryGameScreen> {
   static const String _customPairsKey = 'custom_memory_pairs_v1';
 
-  // Egységesen Google TTS-t használ minden beépített kártya (audioPath nélkül),
-  // a Plüssmaci pedig fonetikus ttsText-et kapott a tiszta magyar kiejtéshez.
   static const List<_MemoryPairItem> _defaultPool = [
     _MemoryPairItem(id: 'dog', title: 'Kutya', emoji: '🐶'),
     _MemoryPairItem(id: 'cat', title: 'Cica', emoji: '🐱'),
@@ -115,7 +113,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
 
   List<_MemoryPairItem> _customPairs = [];
   List<_MemoryBoardCard> _boardCards = [];
-  int _pairCount = 4;
+  int _pairCount = 2; // 2 -> 2x2, 4 -> 3x3, 6 -> 3x4
   int _moves = 0;
   int _matchedPairs = 0;
   bool _isChecking = false;
@@ -186,7 +184,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
       deck.add(_MemoryBoardCard(instanceId: idCounter++, item: item));
     }
 
-    final cols = _pairCount <= 4 ? 2 : 3;
+    final cols = _pairCount == 2 ? 2 : 3;
     _shuffleWithoutAdjacentPairs(deck, cols, random);
 
     setState(() {
@@ -289,7 +287,6 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
     });
 
     if (!_isMuted) {
-      // Csak akkor használ audioPath-t, ha a szülő saját hangot vett fel
       AudioService.instance.speakOrPlay(
         text: card.item.spokenText,
         audioPath: card.item.isCustom ? card.item.audioPath : null,
@@ -313,9 +310,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
       });
 
       if (_matchedPairs >= _pairCount) {
-        // Megvárjuk, amíg az utolsó felfordított kártya nevét teljesen kimondja a TTS (1.6 mp),
-        // és csak utána szólal meg a "Hurrá, nagyon ügyes vagy!" dicséret.
-        await Future.delayed(const Duration(milliseconds: 1600));
+        await Future.delayed(const Duration(milliseconds: 1400));
         if (mounted) {
           await _onGameWon();
         }
@@ -337,9 +332,8 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
   Future<void> _onGameWon() async {
     await context.read<RewardProvider>().addStars(2);
     if (!_isMuted) {
-      // A játék végi dicséret továbbra is a saját felvett mp3 hangfájlodat játssza le!
       AudioService.instance.speakOrPlay(
-        text: 'Hurrá, nagyon ügyes vagy!',
+        text: 'Ügyes vagy!',
         audioPath: 'assets/audio/words/hurra_nagyon_ugyes_vagy.mp3',
       );
     }
@@ -359,7 +353,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
             const Text('🎉🏆🎉', style: TextStyle(fontSize: 48)),
             const SizedBox(height: 12),
             Text(
-              'Hurrá, nagyon ügyes vagy!',
+              'Ügyes vagy!',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 20,
@@ -371,7 +365,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Minden párt megtaláltál $_moves lépésből!\nJutalmad: +2 csillag ⭐',
+              'Minden pár megvan! ($_moves lépés)\n+2 csillag ⭐',
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 15,
@@ -388,7 +382,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
               Navigator.pop(ctx);
               Navigator.pop(context);
             },
-            child: const Text('Vissza a menübe'),
+            child: const Text('Menü'),
           ),
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
@@ -404,7 +398,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
             },
             icon: const Icon(Icons.replay_rounded),
             label: const Text(
-              'Új kártyák!',
+              'Új játék',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
@@ -511,7 +505,6 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
-
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
@@ -556,7 +549,6 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
                             onPressed: () =>
                                 setSheetState(() => pickedImagePath = null),
                           ),
-
                         ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: isRecording
@@ -621,7 +613,6 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
                         ],
                       ],
                     ),
-
                     const SizedBox(height: 10),
                     const Text(
                       'Vagy válassz ikont fotó helyett:',
@@ -885,11 +876,33 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
     );
   }
 
+  Widget _buildCenterSpacerTile(bool isDark) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark
+            ? const Color(0xFF1E293B).withValues(alpha: 0.4)
+            : const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+        ),
+      ),
+      child: Icon(
+        Icons.star_rounded,
+        color: isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1),
+        size: 32,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final crossAxisCount = _pairCount <= 4 ? 2 : 3;
-    final rowCount = (_boardCards.length / crossAxisCount).ceil().clamp(1, 6);
+    final isTwoByTwo = _pairCount == 2;
+    final isThreeByThree = _pairCount == 4;
+    final crossAxisCount = isTwoByTwo ? 2 : 3;
+    final rowCount = isTwoByTwo ? 2 : (isThreeByThree ? 3 : 4);
+    final gridItemCount = isThreeByThree ? 9 : _boardCards.length;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -911,7 +924,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
         actions: [
           IconButton(
             visualDensity: VisualDensity.compact,
-            tooltip: _isMuted ? 'Hang bekapcsolása' : 'Hang némítása',
+            tooltip: _isMuted ? 'Hang be' : 'Némítás',
             icon: Icon(
               _isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
               color: _isMuted
@@ -962,11 +975,21 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
                       ),
                       segments: const [
                         ButtonSegment(
+                          value: 2,
+                          label: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              '2×2',
+                              style: TextStyle(fontSize: 12.5),
+                            ),
+                          ),
+                        ),
+                        ButtonSegment(
                           value: 4,
                           label: FittedBox(
                             fit: BoxFit.scaleDown,
                             child: Text(
-                              '4 pár (Könnyű)',
+                              '3×3',
                               style: TextStyle(fontSize: 12.5),
                             ),
                           ),
@@ -976,7 +999,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
                           label: FittedBox(
                             fit: BoxFit.scaleDown,
                             child: Text(
-                              '6 pár (Nehéz)',
+                              '3×4',
                               style: TextStyle(fontSize: 12.5),
                             ),
                           ),
@@ -1017,7 +1040,6 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
                 ],
               ),
               const SizedBox(height: 10),
-
               Expanded(
                 child: LayoutBuilder(
                   builder: (context, constraints) {
@@ -1036,7 +1058,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
 
                     return GridView.builder(
                       physics: const NeverScrollableScrollPhysics(),
-                      itemCount: _boardCards.length,
+                      itemCount: gridItemCount,
                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: crossAxisCount,
                         crossAxisSpacing: spacing,
@@ -1044,7 +1066,14 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
                         childAspectRatio: aspectRatio,
                       ),
                       itemBuilder: (context, index) {
-                        final card = _boardCards[index];
+                        if (isThreeByThree && index == 4) {
+                          return _buildCenterSpacerTile(isDark);
+                        }
+
+                        final cardIndex = (isThreeByThree && index > 4)
+                            ? index - 1
+                            : index;
+                        final card = _boardCards[cardIndex];
                         final showFace = card.isFlipped || card.isMatched;
 
                         return GestureDetector(

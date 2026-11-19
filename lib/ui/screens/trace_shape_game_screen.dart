@@ -34,7 +34,7 @@ class _TraceShapeGameScreenState extends State<TraceShapeGameScreen> {
 
   void _speakInstruction() {
     AudioService.instance.speakOrPlay(
-      text: 'Rajzold át a vonalat a szürke sávot követve!',
+      text: 'Kövesd a szürke vonalat!',
       audioPath: 'assets/audio/words/rajzold_at_a_vonalat.mp3',
     );
   }
@@ -110,9 +110,7 @@ class _TraceShapeGameScreenState extends State<TraceShapeGameScreen> {
       );
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'Maradj a szürke vonal mentén, és húzd végig az ujjad!',
-          ),
+          content: Text('Kövesd a szürke vonalat!'),
           duration: Duration(seconds: 2),
           backgroundColor: Color(0xFF64748B),
         ),
@@ -133,8 +131,8 @@ class _TraceShapeGameScreenState extends State<TraceShapeGameScreen> {
 
     GameSuccessDialog.show(
       context,
-      title: 'Szép vonalvezetés! 🎨',
-      message: 'Sikeresen átrajzoltad a(z) ${_currentPattern.title} mintát!',
+      title: 'Ügyes vagy! 🎨',
+      message: 'Kész a(z) ${_currentPattern.title}!',
       earnedStar: earnedStar,
       audioPath: 'assets/audio/words/hurra_nagyon_ugyes_vagy.mp3',
       onNext: () {
@@ -431,7 +429,7 @@ class _TraceShapeGameScreenState extends State<TraceShapeGameScreen> {
                   ),
                   icon: const Icon(Icons.check_rounded, color: Colors.white),
                   label: const Text(
-                    'Kész vagyok a vonallal!',
+                    'Kész!',
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,

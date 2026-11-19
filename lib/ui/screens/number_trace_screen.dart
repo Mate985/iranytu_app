@@ -21,7 +21,7 @@ class _NumberTraceScreenState extends State<NumberTraceScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       AudioService.instance.speakOrPlay(
-        text: 'Rajzold át a(z) ${widget.number} számot a szürke vonalon!',
+        text: 'Rajzold át a(z) ${widget.number} számot!',
         audioPath: 'assets/audio/words/rajzold_at_a_szamot.mp3',
       );
     });
@@ -117,14 +117,13 @@ class _NumberTraceScreenState extends State<NumberTraceScreen> {
       );
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Próbáld meg követni a vonalat! 🌟'),
+          content: Text('Kövesd a vonalat! 🌟'),
           backgroundColor: Color(0xFF64748B),
         ),
       );
       return;
     }
 
-    // Pontosság ellenőrzése: a rajzolt pontok legfeljebb 35 pixelre lehetnek a sablon vonalától
     final targetPath = _getNumberPath(widget.number, _canvasSize);
     final metrics = targetPath.computeMetrics().toList();
 
@@ -132,7 +131,6 @@ class _NumberTraceScreenState extends State<NumberTraceScreen> {
     for (final pt in validPoints) {
       bool isClose = false;
       for (final metric in metrics) {
-        // Megkeressük a vonalhoz legközelebbi pontot
         for (double d = 0; d < metric.length; d += 10) {
           final pos = metric.getTangentForOffset(d)?.position;
           if (pos != null && (pos - pt).distance < 35) {
@@ -154,7 +152,7 @@ class _NumberTraceScreenState extends State<NumberTraceScreen> {
       );
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Próbáld meg pontosabban követni a szürke vonalat! ✍️'),
+          content: Text('Kövesd a szürke vonalat! ✍️'),
           backgroundColor: Color(0xFF64748B),
         ),
       );
@@ -178,7 +176,7 @@ class _NumberTraceScreenState extends State<NumberTraceScreen> {
             Icon(Icons.stars_rounded, color: Color(0xFFD97706), size: 30),
             SizedBox(width: 8),
             Text(
-              'Szuper írás! ⭐',
+              'Ügyes vagy! ⭐',
               style: TextStyle(
                 color: Color(0xFF15803D),
                 fontWeight: FontWeight.bold,
@@ -187,7 +185,7 @@ class _NumberTraceScreenState extends State<NumberTraceScreen> {
           ],
         ),
         content: Text(
-          'Hibátlanul átrajzoltad a(z) ${widget.number}-es számot!\nKaptál +1 csillagot érte!',
+          'Szép ${widget.number}-es szám!\n+1 csillag!',
           style: const TextStyle(fontSize: 15, color: Color(0xFF1E293B)),
         ),
         actions: [
@@ -203,7 +201,7 @@ class _NumberTraceScreenState extends State<NumberTraceScreen> {
               Navigator.of(context).pop();
             },
             child: const Text(
-              'Vissza a Számtáblához ➔',
+              'Tovább ➔',
               style: TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
@@ -301,7 +299,7 @@ class _NumberTraceScreenState extends State<NumberTraceScreen> {
                   ),
                   icon: const Icon(Icons.check_rounded, color: Colors.white),
                   label: const Text(
-                    'Kész a szám! Ellenőrzés',
+                    'Kész!',
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
