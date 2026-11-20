@@ -202,14 +202,30 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final dialogBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final primaryText = isDark
+        ? const Color(0xFFF8FAFC)
+        : const Color(0xFF1E293B);
+    final secondaryText = isDark
+        ? const Color(0xFF94A3B8)
+        : const Color(0xFF64748B);
+    final stepCardBg = isDark
+        ? const Color(0xFF0F172A)
+        : const Color(0xFFF8FAFC);
+    final stepCardBorder = isDark
+        ? const Color(0xFF334155)
+        : const Color(0xFFE2E8F0);
+
     final hasRoutineImg =
         _routineImagePath != null && File(_routineImagePath!).existsSync();
 
     return AlertDialog(
+      backgroundColor: dialogBg,
       insetPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 20),
-      title: const Text(
+      title: Text(
         'Új rutin hozzáadása',
-        style: TextStyle(fontWeight: FontWeight.bold),
+        style: TextStyle(fontWeight: FontWeight.bold, color: primaryText),
       ),
       content: SizedBox(
         width: double.maxFinite,
@@ -222,8 +238,10 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
               children: [
                 TextFormField(
                   controller: _titleController,
-                  decoration: const InputDecoration(
+                  style: TextStyle(color: primaryText),
+                  decoration: InputDecoration(
                     labelText: 'Rutin neve (pl. Uzsonna)',
+                    labelStyle: TextStyle(color: secondaryText),
                   ),
                   validator: (v) =>
                       (v == null || v.isEmpty) ? 'Kötelező kitölteni' : null,
@@ -231,7 +249,11 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _descController,
-                  decoration: const InputDecoration(labelText: 'Rövid leírás'),
+                  style: TextStyle(color: primaryText),
+                  decoration: InputDecoration(
+                    labelText: 'Rövid leírás',
+                    labelStyle: TextStyle(color: secondaryText),
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Wrap(
@@ -246,7 +268,7 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
                           File(_routineImagePath!),
                           width: 48,
                           height: 48,
-                          fit: BoxFit.cover,
+                          fit: BoxFit.contain,
                         ),
                       ),
                     OutlinedButton.icon(
@@ -262,9 +284,12 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                const Text(
+                Text(
                   'Szín:',
-                  style: TextStyle(fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: primaryText,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Wrap(
@@ -288,9 +313,12 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
                   }).toList(),
                 ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'Lépések (kép + saját hang):',
-                  style: TextStyle(fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: primaryText,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 ..._stepControllers.asMap().entries.map((entry) {
@@ -309,19 +337,22 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
                     ),
                     decoration: BoxDecoration(
                       color: isThisRecording
-                          ? const Color(0xFFFEE2E2)
-                          : const Color(0xFFF8FAFC),
+                          ? (isDark
+                                ? const Color(
+                                    0xFF7F1D1D,
+                                  ).withValues(alpha: 0.45)
+                                : const Color(0xFFFEE2E2))
+                          : stepCardBg,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: isThisRecording
                             ? const Color(0xFFEF4444)
-                            : const Color(0xFFE2E8F0),
+                            : stepCardBorder,
                       ),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // 1. sor: sorszám/kép + szövegmező + lépés törlése
                         Row(
                           children: [
                             if (hasImg)
@@ -331,7 +362,7 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
                                   File(stepImg),
                                   width: 34,
                                   height: 34,
-                                  fit: BoxFit.cover,
+                                  fit: BoxFit.contain,
                                 ),
                               )
                             else
@@ -339,14 +370,18 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
                                 radius: 12,
                                 backgroundColor: isThisRecording
                                     ? const Color(0xFFEF4444)
-                                    : const Color(0xFFE2E8F0),
+                                    : (isDark
+                                          ? const Color(0xFF334155)
+                                          : const Color(0xFFE2E8F0)),
                                 child: Text(
                                   '${idx + 1}',
                                   style: TextStyle(
                                     fontSize: 11,
                                     color: isThisRecording
                                         ? Colors.white
-                                        : Colors.black87,
+                                        : (isDark
+                                              ? const Color(0xFFE2E8F0)
+                                              : Colors.black87),
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -355,9 +390,13 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
                             Expanded(
                               child: TextField(
                                 controller: ctrl,
-                                style: const TextStyle(fontSize: 14),
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: primaryText,
+                                ),
                                 decoration: InputDecoration(
                                   hintText: '${idx + 1}. lépés',
+                                  hintStyle: TextStyle(color: secondaryText),
                                   isDense: true,
                                   border: InputBorder.none,
                                 ),
@@ -378,7 +417,6 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
                           ],
                         ),
                         const SizedBox(height: 6),
-                        // 2. sor: kép- és hangvezérlők tördelhetően (nincs overflow)
                         Wrap(
                           spacing: 6,
                           runSpacing: 4,
@@ -401,9 +439,9 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
                             IconButton(
                               padding: const EdgeInsets.all(6),
                               constraints: const BoxConstraints(),
-                              icon: const Icon(
+                              icon: Icon(
                                 Icons.camera_alt_rounded,
-                                color: Color(0xFF64748B),
+                                color: secondaryText,
                                 size: 22,
                               ),
                               tooltip: 'Fotó kamerával',
@@ -423,7 +461,7 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
                                     ? const Color(0xFFEF4444)
                                     : (hasAudio
                                           ? const Color(0xFF16A34A)
-                                          : const Color(0xFF64748B)),
+                                          : secondaryText),
                                 size: 22,
                               ),
                               tooltip: isThisRecording
@@ -446,9 +484,9 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
                               IconButton(
                                 padding: const EdgeInsets.all(6),
                                 constraints: const BoxConstraints(),
-                                icon: const Icon(
+                                icon: Icon(
                                   Icons.delete_outline_rounded,
-                                  color: Color(0xFF94A3B8),
+                                  color: secondaryText,
                                   size: 20,
                                 ),
                                 tooltip: 'Hang törlése',

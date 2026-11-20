@@ -170,6 +170,54 @@ class _EditRoutineDialogState extends State<EditRoutineDialog> {
     });
   }
 
+  Widget? _buildPreviewImage(
+    String? rawPath, {
+    required double size,
+    required double radius,
+    required bool isDark,
+  }) {
+    final path = rawPath?.trim() ?? '';
+    if (path.isEmpty) return null;
+
+    Widget? img;
+    if (path.startsWith('assets/')) {
+      img = Image.asset(
+        path,
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+      );
+    } else if (File(path).existsSync()) {
+      img = Image.file(
+        File(path),
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+      );
+    }
+
+    if (img == null) return null;
+
+    return Container(
+      width: size,
+      height: size,
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(
+          color: isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1),
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(radius - 2),
+        child: img,
+      ),
+    );
+  }
+
   Future<void> _saveChanges() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -232,11 +280,23 @@ class _EditRoutineDialogState extends State<EditRoutineDialog> {
   }
 
   Future<void> _confirmDelete() async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Rutin törlése'),
-        content: Text('Törlöd a(z) "${widget.routine.title}" rutint?'),
+        backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+        title: Text(
+          'Rutin törlése',
+          style: TextStyle(
+            color: isDark ? const Color(0xFFF8FAFC) : const Color(0xFF0F172A),
+          ),
+        ),
+        content: Text(
+          'Törlöd a(z) "${widget.routine.title}" rutint?',
+          style: TextStyle(
+            color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF334155),
+          ),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -261,19 +321,41 @@ class _EditRoutineDialogState extends State<EditRoutineDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final hasRoutineImg =
-        _routineImagePath != null &&
-        !_routineImagePath!.startsWith('assets/') &&
-        File(_routineImagePath!).existsSync();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final dialogBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final primaryText = isDark
+        ? const Color(0xFFF8FAFC)
+        : const Color(0xFF1E293B);
+    final secondaryText = isDark
+        ? const Color(0xFF94A3B8)
+        : const Color(0xFF64748B);
+    final stepCardBg = isDark
+        ? const Color(0xFF0F172A)
+        : const Color(0xFFF8FAFC);
+    final stepCardBorder = isDark
+        ? const Color(0xFF334155)
+        : const Color(0xFFE2E8F0);
+
+    final routinePreview = _buildPreviewImage(
+      _routineImagePath,
+      size: 52,
+      radius: 10,
+      isDark: isDark,
+    );
 
     return AlertDialog(
+      backgroundColor: dialogBg,
       insetPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 20),
       title: Row(
         children: [
-          const Expanded(
+          Expanded(
             child: Text(
               'Rutin szerkesztése',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: primaryText,
+              ),
             ),
           ),
           IconButton(
@@ -299,14 +381,22 @@ class _EditRoutineDialogState extends State<EditRoutineDialog> {
               children: [
                 TextFormField(
                   controller: _titleController,
-                  decoration: const InputDecoration(labelText: 'Rutin neve'),
+                  style: TextStyle(color: primaryText),
+                  decoration: InputDecoration(
+                    labelText: 'Rutin neve',
+                    labelStyle: TextStyle(color: secondaryText),
+                  ),
                   validator: (v) =>
                       (v == null || v.isEmpty) ? 'Kötelező kitölteni' : null,
                 ),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _descController,
-                  decoration: const InputDecoration(labelText: 'Rövid leírás'),
+                  style: TextStyle(color: primaryText),
+                  decoration: InputDecoration(
+                    labelText: 'Rövid leírás',
+                    labelStyle: TextStyle(color: secondaryText),
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Wrap(
@@ -314,16 +404,7 @@ class _EditRoutineDialogState extends State<EditRoutineDialog> {
                   runSpacing: 8,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    if (hasRoutineImg)
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: Image.file(
-                          File(_routineImagePath!),
-                          width: 48,
-                          height: 48,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
+                    if (routinePreview != null) routinePreview,
                     OutlinedButton.icon(
                       icon: const Icon(Icons.photo_library_rounded, size: 17),
                       label: const Text('Borítókép'),
@@ -337,9 +418,12 @@ class _EditRoutineDialogState extends State<EditRoutineDialog> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                const Text(
+                Text(
                   'Szín:',
-                  style: TextStyle(fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: primaryText,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Wrap(
@@ -363,9 +447,12 @@ class _EditRoutineDialogState extends State<EditRoutineDialog> {
                   }).toList(),
                 ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'Lépések (kép + saját hang):',
-                  style: TextStyle(fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: primaryText,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 ..._stepControllers.asMap().entries.map((entry) {
@@ -378,10 +465,13 @@ class _EditRoutineDialogState extends State<EditRoutineDialog> {
                       !stepAudio.startsWith('assets/') &&
                       File(stepAudio).existsSync();
                   final stepImg = _stepImagePaths[idx];
-                  final hasLocalImg =
-                      stepImg != null &&
-                      !stepImg.startsWith('assets/') &&
-                      File(stepImg).existsSync();
+                  final stepPreview = _buildPreviewImage(
+                    stepImg,
+                    size: 40,
+                    radius: 8,
+                    isDark: isDark,
+                  );
+                  final hasAnyImg = stepPreview != null;
                   final isRec = _recordingStepIndex == idx;
 
                   return Container(
@@ -392,44 +482,41 @@ class _EditRoutineDialogState extends State<EditRoutineDialog> {
                     ),
                     decoration: BoxDecoration(
                       color: isRec
-                          ? const Color(0xFFFEE2E2)
-                          : const Color(0xFFF8FAFC),
+                          ? (isDark
+                                ? const Color(
+                                    0xFF7F1D1D,
+                                  ).withValues(alpha: 0.45)
+                                : const Color(0xFFFEE2E2))
+                          : stepCardBg,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: isRec
-                            ? const Color(0xFFEF4444)
-                            : const Color(0xFFE2E8F0),
+                        color: isRec ? const Color(0xFFEF4444) : stepCardBorder,
                       ),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // 1. sor: sorszám/kép + szövegmező + lépés törlése
                         Row(
                           children: [
-                            if (hasLocalImg)
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.file(
-                                  File(stepImg),
-                                  width: 34,
-                                  height: 34,
-                                  fit: BoxFit.cover,
-                                ),
-                              )
+                            if (stepPreview != null)
+                              stepPreview
                             else
                               CircleAvatar(
-                                radius: 12,
+                                radius: 13,
                                 backgroundColor: isRec
                                     ? const Color(0xFFEF4444)
-                                    : const Color(0xFFE2E8F0),
+                                    : (isDark
+                                          ? const Color(0xFF334155)
+                                          : const Color(0xFFE2E8F0)),
                                 child: Text(
                                   '${idx + 1}',
                                   style: TextStyle(
                                     fontSize: 11,
                                     color: isRec
                                         ? Colors.white
-                                        : Colors.black87,
+                                        : (isDark
+                                              ? const Color(0xFFE2E8F0)
+                                              : Colors.black87),
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -438,9 +525,13 @@ class _EditRoutineDialogState extends State<EditRoutineDialog> {
                             Expanded(
                               child: TextField(
                                 controller: ctrl,
-                                style: const TextStyle(fontSize: 14),
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: primaryText,
+                                ),
                                 decoration: InputDecoration(
                                   hintText: '${idx + 1}. lépés',
+                                  hintStyle: TextStyle(color: secondaryText),
                                   isDense: true,
                                   border: InputBorder.none,
                                 ),
@@ -461,7 +552,6 @@ class _EditRoutineDialogState extends State<EditRoutineDialog> {
                           ],
                         ),
                         const SizedBox(height: 6),
-                        // 2. sor: kép- és hangvezérlők tördelhetően (nincs overflow)
                         Wrap(
                           spacing: 6,
                           runSpacing: 4,
@@ -472,7 +562,7 @@ class _EditRoutineDialogState extends State<EditRoutineDialog> {
                               constraints: const BoxConstraints(),
                               icon: Icon(
                                 Icons.image_rounded,
-                                color: hasLocalImg
+                                color: hasAnyImg
                                     ? const Color(0xFF16A34A)
                                     : const Color(0xFF0284C7),
                                 size: 22,
@@ -484,9 +574,9 @@ class _EditRoutineDialogState extends State<EditRoutineDialog> {
                             IconButton(
                               padding: const EdgeInsets.all(6),
                               constraints: const BoxConstraints(),
-                              icon: const Icon(
+                              icon: Icon(
                                 Icons.camera_alt_rounded,
-                                color: Color(0xFF64748B),
+                                color: secondaryText,
                                 size: 22,
                               ),
                               tooltip: 'Fotó kamerával',
@@ -506,7 +596,7 @@ class _EditRoutineDialogState extends State<EditRoutineDialog> {
                                     ? const Color(0xFFEF4444)
                                     : (hasLocalAudio
                                           ? const Color(0xFF2563EB)
-                                          : const Color(0xFF64748B)),
+                                          : secondaryText),
                                 size: 22,
                               ),
                               tooltip: isRec
@@ -531,9 +621,9 @@ class _EditRoutineDialogState extends State<EditRoutineDialog> {
                               IconButton(
                                 padding: const EdgeInsets.all(6),
                                 constraints: const BoxConstraints(),
-                                icon: const Icon(
+                                icon: Icon(
                                   Icons.delete_outline_rounded,
-                                  color: Color(0xFF94A3B8),
+                                  color: secondaryText,
                                   size: 20,
                                 ),
                                 tooltip: 'Hang törlése',
